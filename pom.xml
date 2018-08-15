@@ -71,6 +71,12 @@
             <artifactId>activemq-camel</artifactId>
         </dependency>
 
+        <!-- JMX over HTTP -->
+        <dependency>
+            <groupId>org.jolokia</groupId>
+            <artifactId>jolokia-core</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>
