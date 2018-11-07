@@ -31,10 +31,10 @@ import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 import java.net.URLEncoder;
 
-public class SitemapUrlProcessor implements Processor {
+public class MetsToUrlProcessor implements Processor {
     private final XPathFactory xPathFactory = XPathFactory.newInstance();
 
-    public SitemapUrlProcessor() {
+    public MetsToUrlProcessor() {
         DocumentBuilderFactory documentFactory = DocumentBuilderFactory.newInstance();
         documentFactory.setNamespaceAware(true);
     }
@@ -52,13 +52,13 @@ public class SitemapUrlProcessor implements Processor {
         XPathExpression tenantExpr = xPath.compile("//mets:mets/mets:metsHdr/mets:agent/mets:name");
         String tenantName = tenantExpr.evaluate(metsDoc, XPathConstants.STRING).toString();
 
-        exchange.setProperty("uri", tenantName);
+        exchange.setProperty("tenant", tenantName);
         String pid = exchange.getProperty("pid", String.class);
         String encodedpid = URLEncoder.encode(pid, "UTF-8");
 
-        uriTemplate = uriTemplate.replace("##protocol##", "http");
-        uriTemplate = uriTemplate.replace("##tenant##", tenantName);
-        uriTemplate = uriTemplate.replace("##pid##", URLEncoder.encode(pid, "UTF-8"));
+        uriTemplate = uriTemplate.replace("##protocol##", "http")
+                .replace("##tenant##", tenantName)
+                .replace("##pid##", encodedpid);
 
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode uriNode = mapper.createObjectNode();

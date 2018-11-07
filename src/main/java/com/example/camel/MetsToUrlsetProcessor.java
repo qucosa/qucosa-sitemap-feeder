@@ -30,10 +30,10 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 
-public class SitemapUrlsetProcessor implements Processor {
+public class MetsToUrlsetProcessor implements Processor {
     private final XPathFactory xPathFactory = XPathFactory.newInstance();
 
-    public SitemapUrlsetProcessor() { }
+    public MetsToUrlsetProcessor() { }
 
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -46,7 +46,7 @@ public class SitemapUrlsetProcessor implements Processor {
         XPathExpression tenantExpr = xPath.compile("//mets:mets/mets:metsHdr/mets:agent/mets:name");
         String tenantName = tenantExpr.evaluate(metsDoc, XPathConstants.STRING).toString();
 
-        exchange.setProperty("uri", tenantName);
+        exchange.setProperty("tenant", tenantName);
 
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode uriNode = mapper.createObjectNode();
