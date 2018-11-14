@@ -15,43 +15,43 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.example.camel;
+package com.example.camel.camelprocessors;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.json.simple.JsonObject;
-import org.springframework.util.xml.SimpleNamespaceContext;
-import org.w3c.dom.Document;
 
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpression;
-import javax.xml.xpath.XPathFactory;
+import java.io.IOException;
 
-public class MetsToUrlsetProcessor implements Processor {
-    private final XPathFactory xPathFactory = XPathFactory.newInstance();
+public class UrlsetFormatProcessor implements Processor {
 
-    public MetsToUrlsetProcessor() { }
+    public UrlsetFormatProcessor() { }
 
     @Override
-    public void process(Exchange exchange) throws Exception {
-        Document metsDoc = exchange.getIn().getBody(Document.class);
-        XPath xPath = xPathFactory.newXPath();
-        SimpleNamespaceContext namespaceContext = new SimpleNamespaceContext();
-        namespaceContext.bindNamespaceUri("mets", "http://www.loc.gov/METS/");
-        xPath.setNamespaceContext(namespaceContext);
-        // get tenant name
-        XPathExpression tenantExpr = xPath.compile("//mets:mets/mets:metsHdr/mets:agent/mets:name");
-        String tenantName = tenantExpr.evaluate(metsDoc, XPathConstants.STRING).toString();
+    public void process(Exchange exchange) throws IOException {
+        String originalJsonString = exchange.getIn().getBody(String.class);
 
-        exchange.setProperty("tenant", tenantName);
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode jsonNode = mapper.readTree(originalJsonString);
+        String tenant = jsonNode.get("tenant").asText();
+
+        ObjectNode urlsetJsonFormat = mapper.createObjectNode();
+        urlsetJsonFormat.put("uri", tenant);
+
+        exchange.getIn().setBody(urlsetJsonFormat.toString(), JsonObject.class);
+
+        /*
+        ObjectNode jsonObjectInformation = exchange.getIn().getBody(ObjectNode.class);
+        String tenant = jsonObjectInformation.get("tenant").asText();
 
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode uriNode = mapper.createObjectNode();
-        uriNode.put("uri", tenantName);
+        uriNode.put("uri", tenant);
 
         exchange.getIn().setBody(uriNode.toString(), JsonObject.class);
+        */
     }
 }
