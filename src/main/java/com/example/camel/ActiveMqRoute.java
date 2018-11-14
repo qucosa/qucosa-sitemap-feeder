@@ -1,14 +1,20 @@
 package com.example.camel;
 
+import com.example.camel.camelprocessors.AMQMessageProcessor;
+import com.example.camel.camelprocessors.SetPropertyEncodedpid;
+import com.example.camel.camelprocessors.UrlFormatProcessor;
+import com.example.camel.camelprocessors.UrlsetFormatProcessor;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.builder.xml.Namespaces;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.component.kafka.KafkaComponent;
 import org.apache.camel.component.kafka.KafkaConstants;
+import org.apache.camel.processor.aggregate.AggregationStrategy;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 
+import javax.servlet.http.HttpServletResponse;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -16,8 +22,11 @@ public class ActiveMqRoute extends RouteBuilder {
 
     @Override
     public void configure() {
-        MetsToUrlsetProcessor metsToUrlsetProcessor = new MetsToUrlsetProcessor();
-        MetsToUrlProcessor metsToUrlProcessor = new MetsToUrlProcessor();
+        UrlsetFormatProcessor urlsetFormatProcessor = new UrlsetFormatProcessor();
+        UrlFormatProcessor urlFormatProcessor = new UrlFormatProcessor();
+        AMQMessageProcessor amqMessageProcessor = new AMQMessageProcessor();
+        AggregationStrategy appendUrlsetName = new AppendUrlsetNameStrategy();
+        SetPropertyEncodedpid setPropertyEncodedpid = new SetPropertyEncodedpid();
 
         Namespaces ns = new Namespaces("atom", "http://www.w3.org/2005/Atom")
                 .add("mets", "http://www.loc.gov/METS/");
@@ -28,27 +37,30 @@ public class ActiveMqRoute extends RouteBuilder {
         getContext().addComponent("kafka", kafka);
 
         // Transport updated PIDs to Kafka topic
-        from("activemq:topic:fedora.apim.updates")
+        from("activemq:topic:fedora.apim.update")
                 .id("fcrepo_updates")
-                .setProperty("method", xpath("/atom:entry/atom:title[@type='text']/text()").namespaces(ns))
-                .transform(xpath("/atom:entry/atom:summary[@type='text']/text()", String.class)
-                        .namespaces(ns))
-                .to("kafka:fcrepo_updates");
+                // XML-to-JSON-mapping of relevant information
+                .process(amqMessageProcessor)
+                .to("kafka:fcrepo_updates", "kafka:sitemap_feeder");
 
         // Obtain and post METS XML to Kafka topic
         from("kafka:fcrepo_updates?groupId=mets_dissemination")
                 .id("mets_update")
-                .log("body: ${body}")
+                // aus body die methode etc. ziehen
+                .transform(jsonpath("$.pid"))
                 .resequence().body().timeout(TimeUnit.SECONDS.toMillis(5))
                 .setProperty("pid", body())
                 .setHeader(Exchange.HTTP_QUERY, simple("pid=${exchangeProperty[pid]}"))
                 .throttle(1)
                 .to("http4://sdvcmr-app03:8080/mets")
-//                .convertBodyTo(String.class, "UTF-8")
                 .convertBodyTo(Document.class, "UTF-8")
                 .setHeader(KafkaConstants.KEY, exchangeProperty("pid"))
                 .setProperty("tenant", xpath("//mets:mets/mets:metsHdr/mets:agent/mets:name").namespaces(ns))
-                .to("kafka:mets_updates");
+                .to("kafka:mets_updates")
+        ;
+
+        // TODO: statt METS: http://sdvcmr-app03:8080/fedora/objects/qucosa:70489?format=xml
+        // exchange enrichen (oben methoden, hier tenant aus objectProfile/ObjOwnerId/text()
 
         // Send XML to ExistDB
         from("kafka:mets_updates?groupId=existdb_feeder")
@@ -70,88 +82,117 @@ public class ActiveMqRoute extends RouteBuilder {
                         "&authPassword=qucosa-ingest")
                 .log("Updated ${header.CamelHttpPath}");
 
-        from("kafka:mets_updates?groupId=sitemap_feeder")
+        from("kafka:sitemap_feeder")
                 .id("sitemap_feeder")
-//                .noAutoStartup()
-                .setProperty("pid", header(KafkaConstants.KEY))
+                .log("sitemap_feeder body: ${body}")
+                // appends tenant (urlset-name) to object-information in body
+                .enrich("direct:objectinfo", appendUrlsetName)
+                .log("sitemap_feeder body after enrich: ${body}")
                 .choice()
-                .when().simple("${exchangeProperty.method} == 'ingest'")
+                .when().jsonpath("$.[?(@.method == 'ingest')]")
                     .multicast()
                     .parallelProcessing(false)
                     .to("direct:sitemap_create_urlset", "direct:sitemap_create_url")
                     .endChoice()
-                .when().simple("${exchangeProperty.method} == 'addDatastream'")
+                .when().jsonpath("$.[?(@.method == 'addDatastream')]")
                     .multicast()
                     .parallelProcessing(false)
                     .to("direct:sitemap_create_or_modify_urlset", "direct:sitemap_create_url")
                     .endChoice()
-                .when().simple("${exchangeProperty.method} == 'purgeObject'")
+                .when().jsonpath("$.[?(@.method == 'purgeObject')]")
                     // needs mets (tenantname for URL)
                     .multicast()
                     .parallelProcessing(false)
                     .to("direct:sitemap_create_or_modify_urlset", "direct:sitemap_delete_url")
                     .endChoice()
-                .when().simple("${exchangeProperty.method} == 'modifyObject'")
+                .when().jsonpath("$.[?(@.method == 'modifyObject')]")
                     // notwendigkeit überprüfen
                     .multicast()
                     .parallelProcessing(false)
-                    .to("direct:sitemap_modify_urlset", "direct:sitemap_modify_url")
+//                    .to("direct:sitemap_create_urlset", "direct:sitemap_modify_url")
+                    .to("direct:sitemap_create_urlset", "direct:sitemap_create_url")
                     .endChoice()
-                .when().simple("${exchangeProperty.method} == 'setDatastreamState'")
+                .when().jsonpath("$.[?(@.method == 'setDatastreamState')]")
                     // notwendigkeit überprüfen
                     .multicast()
                     .parallelProcessing(false)
                     .to("direct:sitemap_modify_url")
                     .endChoice()
                 .end();
-        //                .when().simple("${exchangeProperty.method} == 'modifyDatastreamByReference'")
-        //                .to("direct:updateDatastreamIndex")
-        //                .when().simple("${exchangeProperty.method} == 'modifyDatastreamByValue'")
-        //                .to("direct:updateDatastreamIndex")
-        //                .when().simple("${exchangeProperty.method} == 'purgeDatastream'")
-        //                .to("direct:deleteDatastreamIndex")
+
+        from("direct:objectinfo")
+                .process(setPropertyEncodedpid)
+                .recipientList(simple("http4://sdvcmr-app03:8080/fedora/objects/${exchangeProperty.encodedpid}?format=xml"));
 
         // Sitemap update
-
         from("direct:sitemap_create_urlset")
-                // create urlset if missing
-                .setProperty("pid", header(KafkaConstants.KEY))
-                .process(metsToUrlsetProcessor)
-                .log("tenantname: ${body}")
+                // set json-format for urlset's with tenantname (urlset-uri)
+                .process(urlsetFormatProcessor)
+                .log("create_urlset (json): ${body}")
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .throttle(10)
-                .to("http4://localhost:8090/urlsets");
+                // throwExceptionOnFailure set to false to disable camel from throwing HttpOperationFailedException
+                // on response-codes 300+
+                .to("http4://localhost:8090/urlsets?throwExceptionOnFailure=false");
 
         from("direct:sitemap_create_url")
                 // create urlset if missing
-                .setProperty("pid", header(KafkaConstants.KEY))
-                .process(metsToUrlProcessor)
-                .log("tenantname: ${body}")
+                .setProperty("tenant", jsonpath("$.tenant"))
+                .process(urlFormatProcessor)
+                .log("create_url (json): ${body}")
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .setHeader("pid", exchangeProperty("pid"))
                 .throttle(10)
-                // exchange property set in createUrlsetProcessor
-                .recipientList(simple("http4://localhost:8090/urlsets/${exchangeProperty.uri}"));
+                .recipientList(simple("http4://localhost:8090/urlsets/${exchangeProperty.tenant}"));
 
         //TODO delete-routes
         from("direct:sitemap_delete_urlset")
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
                 // get url for qucosa id
-                .process(metsToUrlsetProcessor)
-                .to("http4://localhost:8090/urlsets/${exchangeProperty.tenant}");
+                .process(urlsetFormatProcessor)
+                .to("http4://localhost:8090/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false");
 
         from("direct:sitemap_delete_url")
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
                 // body
-                .process(metsToUrlProcessor)
-//                .marshal(jsonUrlFormat)
-                .to("http4://localhost:8090/urlsets/${exchangeProperty.tenant}/deleteurl");
+                .process(urlFormatProcessor)
+                .to("http4://localhost:8090/urlsets/${exchangeProperty.tenant}/deleteurl?throwExceptionOnFailure=false");
 
         //TODO modify-route
+        from("direct:sitemap_create_or_modify_urlset")
+                // create urlset if missing
+                .setProperty("pid", header(KafkaConstants.KEY))
+                .process(urlsetFormatProcessor)
+                .log("tenantname: ${body}")
+                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
+                .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
+                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                .throttle(10)
+                .to("http4://localhost:8090/urlsets?throwExceptionOnFailure=false")
+                .process(exchange -> {
+                    HttpServletResponse response = exchange.getIn().getBody(HttpServletResponse.class);
+                    int statuscode = response.getStatus();
 
+                    if (statuscode == 404) {
+                        exchange.setProperty("urlset_available", true);
+                    }
+                    // urlset already created, statuscode 208 = already reported
+                    if (statuscode == 208) {
+
+                    } else {
+                        exchange.setProperty("urlset_available", false);
+                    }
+                })
+                .choice()
+                    .when().simple("${exchangeProperty.urlset_available} == 'true'")
+                .multicast()
+                .parallelProcessing(false)
+                .to("direct:sitemap_create_urlset", "direct:sitemap_create_url")
+                .endChoice()
+        ;
     }
 }
