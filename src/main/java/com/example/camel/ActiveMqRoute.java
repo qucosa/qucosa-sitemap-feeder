@@ -2,7 +2,9 @@ package com.example.camel;
 
 import com.example.camel.camelprocessors.AMQMessageProcessor;
 import com.example.camel.camelprocessors.SetPropertyEncodedpid;
+import com.example.camel.camelprocessors.SetupJsonForBulkInsert;
 import com.example.camel.camelprocessors.UrlFormatProcessor;
+import com.example.camel.camelprocessors.UrlModifyLastmod;
 import com.example.camel.camelprocessors.UrlsetFormatProcessor;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
@@ -27,6 +29,8 @@ public class ActiveMqRoute extends RouteBuilder {
         AMQMessageProcessor amqMessageProcessor = new AMQMessageProcessor();
         AggregationStrategy appendUrlsetName = new AppendUrlsetNameStrategy();
         SetPropertyEncodedpid setPropertyEncodedpid = new SetPropertyEncodedpid();
+        SetupJsonForBulkInsert jsonForBulkInsert = new SetupJsonForBulkInsert();
+        UrlModifyLastmod urlLastmod = new UrlModifyLastmod();
 
         Namespaces ns = new Namespaces("atom", "http://www.w3.org/2005/Atom")
                 .add("mets", "http://www.loc.gov/METS/");
@@ -41,7 +45,8 @@ public class ActiveMqRoute extends RouteBuilder {
                 .id("fcrepo_updates")
                 // XML-to-JSON-mapping of relevant information
                 .process(amqMessageProcessor)
-                .to("kafka:fcrepo_updates", "kafka:sitemap_feeder");
+                .to("kafka:fcrepo_updates", "kafka:sitemap_feeder")
+        ;
 
         // Obtain and post METS XML to Kafka topic
         from("kafka:fcrepo_updates?groupId=mets_dissemination")
@@ -62,25 +67,12 @@ public class ActiveMqRoute extends RouteBuilder {
         // TODO: statt METS: http://sdvcmr-app03:8080/fedora/objects/qucosa:70489?format=xml
         // exchange enrichen (oben methoden, hier tenant aus objectProfile/ObjOwnerId/text()
 
-        // Send XML to ExistDB
-        from("kafka:mets_updates?groupId=existdb_feeder")
-                .id("existdb_feeder")
-                .noAutoStartup()
-                .setProperty("pid", header(KafkaConstants.KEY))
-                .process(exchange -> {
-                    String pid = exchange.getIn().getHeader(KafkaConstants.KEY, String.class);
-                    exchange.getIn().setHeader(Exchange.HTTP_PATH,
-                            String.format("/db/qucosa/mets/test/%s.mets.xml", pid.replaceFirst(":", "-")));
-                    exchange.setProperty("pid", pid);
-                })
-                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.PUT))
-                .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
-                .setHeader(Exchange.CONTENT_TYPE, constant("application/xml"))
-                .throttle(10)
-                .to("http4://sdvexistdb01:8080/exist/rest" +
-                        "?authUsername=qucosa-ingest" +
-                        "&authPassword=qucosa-ingest")
-                .log("Updated ${header.CamelHttpPath}");
+        // route to update sitemap via pid's in exchange (exchange-body = qucosa:12345)
+        from("kafka:pidupdate")
+                .id("pidupdate")
+                // set/get method/tenant/pid/encodedpid
+                .process(jsonForBulkInsert)
+                .to("kafka:sitemap_feeder");
 
         from("kafka:sitemap_feeder")
                 .id("sitemap_feeder")
@@ -97,31 +89,25 @@ public class ActiveMqRoute extends RouteBuilder {
                 .when().jsonpath("$.[?(@.method == 'addDatastream')]")
                     .multicast()
                     .parallelProcessing(false)
-                    .to("direct:sitemap_create_or_modify_urlset", "direct:sitemap_create_url")
+                    .to("direct:sitemap_modify_url")
                     .endChoice()
                 .when().jsonpath("$.[?(@.method == 'purgeObject')]")
                     // needs mets (tenantname for URL)
                     .multicast()
                     .parallelProcessing(false)
-                    .to("direct:sitemap_create_or_modify_urlset", "direct:sitemap_delete_url")
+                    .to("direct:sitemap_delete_url")
                     .endChoice()
                 .when().jsonpath("$.[?(@.method == 'modifyObject')]")
                     // notwendigkeit überprüfen
                     .multicast()
                     .parallelProcessing(false)
-//                    .to("direct:sitemap_create_urlset", "direct:sitemap_modify_url")
-                    .to("direct:sitemap_create_urlset", "direct:sitemap_create_url")
+                    .to("direct:sitemap_modify_url_lastmod")
                     .endChoice()
-                .when().jsonpath("$.[?(@.method == 'setDatastreamState')]")
-                    // notwendigkeit überprüfen
-                    .multicast()
-                    .parallelProcessing(false)
-                    .to("direct:sitemap_modify_url")
-                    .endChoice()
+//                .when().jsonpath("$.[?(@.method == 'setDatastreamState')]")
                 .end();
 
         from("direct:objectinfo")
-                .process(setPropertyEncodedpid)
+                .setProperty("encodedpid", jsonpath("$.encodedpid"))
                 .recipientList(simple("http4://sdvcmr-app03:8080/fedora/objects/${exchangeProperty.encodedpid}?format=xml"));
 
         // Sitemap update
@@ -151,16 +137,23 @@ public class ActiveMqRoute extends RouteBuilder {
 
         //TODO delete-routes
         from("direct:sitemap_delete_urlset")
+                .setProperty("tenant", jsonpath("$.tenant"))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
-                // get url for qucosa id
-                .process(urlsetFormatProcessor)
                 .to("http4://localhost:8090/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false");
 
         from("direct:sitemap_delete_url")
+                .setProperty("tenant", jsonpath("$.tenant"))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
-                // body
                 .process(urlFormatProcessor)
                 .to("http4://localhost:8090/urlsets/${exchangeProperty.tenant}/deleteurl?throwExceptionOnFailure=false");
+
+        from("direct:sitemap_modify_url_lastmod")
+                .setProperty("tenant", jsonpath("$.tenant"))
+                .process(urlFormatProcessor)
+                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.PUT))
+                .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
+                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                .to("http4://localhost:8090/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false");
 
         //TODO modify-route
         from("direct:sitemap_create_or_modify_urlset")
@@ -193,6 +186,27 @@ public class ActiveMqRoute extends RouteBuilder {
                 .parallelProcessing(false)
                 .to("direct:sitemap_create_urlset", "direct:sitemap_create_url")
                 .endChoice()
+        ;
+
+        // Send XML to ExistDB
+        from("kafka:mets_updates?groupId=existdb_feeder")
+                .id("existdb_feeder")
+                .noAutoStartup()
+                .setProperty("pid", header(KafkaConstants.KEY))
+                .process(exchange -> {
+                    String pid = exchange.getIn().getHeader(KafkaConstants.KEY, String.class);
+                    exchange.getIn().setHeader(Exchange.HTTP_PATH,
+                            String.format("/db/qucosa/mets/test/%s.mets.xml", pid.replaceFirst(":", "-")));
+                    exchange.setProperty("pid", pid);
+                })
+                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.PUT))
+                .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
+                .setHeader(Exchange.CONTENT_TYPE, constant("application/xml"))
+                .throttle(10)
+                .to("http4://sdvexistdb01:8080/exist/rest" +
+                        "?authUsername=qucosa-ingest" +
+                        "&authPassword=qucosa-ingest")
+                .log("Updated ${header.CamelHttpPath}")
         ;
     }
 }
