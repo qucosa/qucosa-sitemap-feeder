@@ -1,10 +1,8 @@
 package com.example.camel;
 
 import com.example.camel.camelprocessors.AMQMessageProcessor;
-import com.example.camel.camelprocessors.SetPropertyEncodedpid;
 import com.example.camel.camelprocessors.SetupJsonForBulkInsert;
 import com.example.camel.camelprocessors.UrlFormatProcessor;
-import com.example.camel.camelprocessors.UrlModifyLastmod;
 import com.example.camel.camelprocessors.UrlsetFormatProcessor;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
@@ -28,16 +26,14 @@ public class ActiveMqRoute extends RouteBuilder {
         UrlFormatProcessor urlFormatProcessor = new UrlFormatProcessor();
         AMQMessageProcessor amqMessageProcessor = new AMQMessageProcessor();
         AggregationStrategy appendUrlsetName = new AppendUrlsetNameStrategy();
-        SetPropertyEncodedpid setPropertyEncodedpid = new SetPropertyEncodedpid();
         SetupJsonForBulkInsert jsonForBulkInsert = new SetupJsonForBulkInsert();
-        UrlModifyLastmod urlLastmod = new UrlModifyLastmod();
 
         Namespaces ns = new Namespaces("atom", "http://www.w3.org/2005/Atom")
                 .add("mets", "http://www.loc.gov/METS/");
 
         // setup kafka component with the brokers
         KafkaComponent kafka = new KafkaComponent();
-        kafka.setBrokers("localhost:9092");
+        kafka.setBrokers("{{kafka.broker.host}}:{{kafka.broker.port}}");
         getContext().addComponent("kafka", kafka);
 
         // Transport updated PIDs to Kafka topic
@@ -57,7 +53,7 @@ public class ActiveMqRoute extends RouteBuilder {
                 .setProperty("pid", body())
                 .setHeader(Exchange.HTTP_QUERY, simple("pid=${exchangeProperty[pid]}"))
                 .throttle(1)
-                .to("http4://sdvcmr-app03:8080/mets")
+                .to("http4://{{fedora.host}}:{{fedora.port}}/mets")
                 .convertBodyTo(Document.class, "UTF-8")
                 .setHeader(KafkaConstants.KEY, exchangeProperty("pid"))
                 .setProperty("tenant", xpath("//mets:mets/mets:metsHdr/mets:agent/mets:name").namespaces(ns))
@@ -108,7 +104,7 @@ public class ActiveMqRoute extends RouteBuilder {
 
         from("direct:objectinfo")
                 .setProperty("encodedpid", jsonpath("$.encodedpid"))
-                .recipientList(simple("http4://sdvcmr-app03:8080/fedora/objects/${exchangeProperty.encodedpid}?format=xml"));
+                .recipientList(simple("http4://{{fedora.host}}:{{fedora.port}}/fedora/objects/${exchangeProperty.encodedpid}?format=xml"));
 
         // Sitemap update
         from("direct:sitemap_create_urlset")
@@ -121,7 +117,7 @@ public class ActiveMqRoute extends RouteBuilder {
                 .throttle(10)
                 // throwExceptionOnFailure set to false to disable camel from throwing HttpOperationFailedException
                 // on response-codes 300+
-                .to("http4://localhost:8090/urlsets?throwExceptionOnFailure=false");
+                .to("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets?throwExceptionOnFailure=false");
 
         from("direct:sitemap_create_url")
                 // create urlset if missing
@@ -133,19 +129,19 @@ public class ActiveMqRoute extends RouteBuilder {
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .setHeader("pid", exchangeProperty("pid"))
                 .throttle(10)
-                .recipientList(simple("http4://localhost:8090/urlsets/${exchangeProperty.tenant}"));
+                .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}"));
 
         //TODO delete-routes
         from("direct:sitemap_delete_urlset")
                 .setProperty("tenant", jsonpath("$.tenant"))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
-                .to("http4://localhost:8090/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false");
+                .to("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false");
 
         from("direct:sitemap_delete_url")
                 .setProperty("tenant", jsonpath("$.tenant"))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
                 .process(urlFormatProcessor)
-                .to("http4://localhost:8090/urlsets/${exchangeProperty.tenant}/deleteurl?throwExceptionOnFailure=false");
+                .to("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}/deleteurl?throwExceptionOnFailure=false");
 
         from("direct:sitemap_modify_url_lastmod")
                 .setProperty("tenant", jsonpath("$.tenant"))
@@ -153,7 +149,7 @@ public class ActiveMqRoute extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.PUT))
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-                .to("http4://localhost:8090/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false");
+                .to("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false");
 
         //TODO modify-route
         from("direct:sitemap_create_or_modify_urlset")
@@ -165,7 +161,7 @@ public class ActiveMqRoute extends RouteBuilder {
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .throttle(10)
-                .to("http4://localhost:8090/urlsets?throwExceptionOnFailure=false")
+                .to("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets?throwExceptionOnFailure=false")
                 .process(exchange -> {
                     HttpServletResponse response = exchange.getIn().getBody(HttpServletResponse.class);
                     int statuscode = response.getStatus();
@@ -203,9 +199,9 @@ public class ActiveMqRoute extends RouteBuilder {
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/xml"))
                 .throttle(10)
-                .to("http4://sdvexistdb01:8080/exist/rest" +
-                        "?authUsername=qucosa-ingest" +
-                        "&authPassword=qucosa-ingest")
+                .to("http4://{{existdb.host}}:{{existdb.port}}/exist/rest" +
+                        "?authUsername={{existdb.user}}" +
+                        "&authPassword={{existdb.pw}}")
                 .log("Updated ${header.CamelHttpPath}")
         ;
     }
