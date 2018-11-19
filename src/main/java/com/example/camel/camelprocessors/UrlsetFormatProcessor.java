@@ -42,16 +42,5 @@ public class UrlsetFormatProcessor implements Processor {
         urlsetJsonFormat.put("uri", tenant);
 
         exchange.getIn().setBody(urlsetJsonFormat.toString(), JsonObject.class);
-
-        /*
-        ObjectNode jsonObjectInformation = exchange.getIn().getBody(ObjectNode.class);
-        String tenant = jsonObjectInformation.get("tenant").asText();
-
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode uriNode = mapper.createObjectNode();
-        uriNode.put("uri", tenant);
-
-        exchange.getIn().setBody(uriNode.toString(), JsonObject.class);
-        */
     }
 }

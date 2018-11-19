@@ -56,7 +56,6 @@ public class AMQMessageProcessor implements Processor {
         ObjectNode amqMessageInfoAsJson = mapper.createObjectNode();
 
         String encodedpid = URLEncoder.encode(pid, "UTF-8");
-//        exchange.setProperty("encodedpid", encodedpid);
 
         amqMessageInfoAsJson.put("pid", pid);
         amqMessageInfoAsJson.put("encodedpid", encodedpid);

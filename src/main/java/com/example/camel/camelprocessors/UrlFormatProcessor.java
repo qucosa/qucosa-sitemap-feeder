@@ -41,6 +41,8 @@ public class UrlFormatProcessor implements Processor {
         JsonNode jsonNode = mapper.readTree(originalJsonString);
         String tenant = jsonNode.get("tenant").asText();
         String encodedpid = jsonNode.get("encodedpid").asText();
+
+        // convert ...-date to w3c-datetime for sitemap-entry
         String modifiedDate = jsonNode.get("modifiedDate").asText();
 
         uriTemplate = uriTemplate.replace("##protocol##", "https")

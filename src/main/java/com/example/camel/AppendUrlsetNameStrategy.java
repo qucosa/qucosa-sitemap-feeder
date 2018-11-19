@@ -46,22 +46,18 @@ public class AppendUrlsetNameStrategy implements AggregationStrategy {
 
     @Override
     public Exchange aggregate(Exchange original, Exchange resource) {
-//        JsonObject originalBody = original.getIn().getBody(JsonObject.class);
         String originalJsonBody = original.getIn().getBody(String.class);
-
         Document fedoraObjectInformationResponse = resource.getIn().getBody(Document.class);
 
         String tenant = null;
-
-
         try {
             tenant = xPath.compile("//obj:objectProfile/obj:objOwnerId/text()")
                     .evaluate(fedoraObjectInformationResponse, XPathConstants.STRING).toString();
         } catch (XPathExpressionException e) {
             System.out.println("error getting tenant/objOwnerId for object.");
         }
-        // append tenant (urlset-name)
 
+        // append tenant (urlset-name)
         ObjectMapper mapper = new ObjectMapper();
         try {
             JsonNode jsonInfo = mapper.readTree(originalJsonBody);
@@ -73,7 +69,7 @@ public class AppendUrlsetNameStrategy implements AggregationStrategy {
         } catch (IOException e) {
             System.out.println("problem reading json-info from exchange-body");
         }
-//        originalJsonBody.put("tenant", tenant);
+
         return original;
     }
 }
