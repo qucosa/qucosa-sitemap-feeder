@@ -32,4 +32,6 @@ public class UnitTests extends CamelTestSupport {
 
         assertTrue(true);
     }
+
+    /* TODO unit tests ausbauen */
 }

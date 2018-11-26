@@ -44,10 +44,17 @@ public class ActiveMqRoute extends RouteBuilder {
                 .to("kafka:fcrepo_updates", "kafka:sitemap_feeder")
         ;
 
+        // route to update sitemap via pid's (post qucosa-ID's (qucosa:12345) to kafka topic "pidupdate")
+        from("kafka:pidupdate")
+                .id("pidupdate")
+                // set/get method/tenant/pid/encodedpid
+                .process(jsonForBulkInsert)
+                .to("kafka:sitemap_feeder")
+        ;
+
         // Obtain and post METS XML to Kafka topic
         from("kafka:fcrepo_updates?groupId=mets_dissemination")
                 .id("mets_update")
-                // aus body die methode etc. ziehen
                 .transform(jsonpath("$.pid"))
                 .resequence().body().timeout(TimeUnit.SECONDS.toMillis(5))
                 .setProperty("pid", body())
@@ -59,16 +66,6 @@ public class ActiveMqRoute extends RouteBuilder {
                 .setProperty("tenant", xpath("//mets:mets/mets:metsHdr/mets:agent/mets:name").namespaces(ns))
                 .to("kafka:mets_updates")
         ;
-
-        // TODO: statt METS: http://sdvcmr-app03:8080/fedora/objects/qucosa:70489?format=xml
-        // exchange enrichen (oben methoden, hier tenant aus objectProfile/ObjOwnerId/text()
-
-        // route to update sitemap via pid's in exchange (exchange-body = qucosa:12345)
-        from("kafka:pidupdate")
-                .id("pidupdate")
-                // set/get method/tenant/pid/encodedpid
-                .process(jsonForBulkInsert)
-                .to("kafka:sitemap_feeder");
 
         from("kafka:sitemap_feeder")
                 .id("sitemap_feeder")
@@ -85,21 +82,18 @@ public class ActiveMqRoute extends RouteBuilder {
                 .when().jsonpath("$.[?(@.method == 'addDatastream')]")
                     .multicast()
                     .parallelProcessing(false)
-                    .to("direct:sitemap_modify_url")
+                    .to("direct:sitemap_modify_url_lastmod")
                     .endChoice()
                 .when().jsonpath("$.[?(@.method == 'purgeObject')]")
-                    // needs mets (tenantname for URL)
                     .multicast()
                     .parallelProcessing(false)
-                    .to("direct:sitemap_delete_url")
+                    .to("direct:sitemap_delete_url", "direct:sitemap_update_urlset_lastmod")
                     .endChoice()
                 .when().jsonpath("$.[?(@.method == 'modifyObject')]")
-                    // notwendigkeit überprüfen
                     .multicast()
                     .parallelProcessing(false)
                     .to("direct:sitemap_modify_url_lastmod")
                     .endChoice()
-//                .when().jsonpath("$.[?(@.method == 'setDatastreamState')]")
                 .end();
 
         from("direct:objectinfo")
@@ -131,7 +125,6 @@ public class ActiveMqRoute extends RouteBuilder {
                 .throttle(10)
                 .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}"));
 
-        //TODO delete-routes
         from("direct:sitemap_delete_urlset")
                 .setProperty("tenant", jsonpath("$.tenant"))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
