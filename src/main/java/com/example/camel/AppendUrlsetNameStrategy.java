@@ -32,11 +32,14 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
+import java.util.Map;
 
 public class AppendUrlsetNameStrategy implements AggregationStrategy {
     private final XPath xPath =  XPathFactory.newInstance().newXPath();
+    private final Map<String, String> tenants;
 
-    public AppendUrlsetNameStrategy() {
+    public AppendUrlsetNameStrategy(Map<String, String> tenantmap) {
+        this.tenants = tenantmap;
         DocumentBuilderFactory documentFactory = DocumentBuilderFactory.newInstance();
         documentFactory.setNamespaceAware(true);
         SimpleNamespaceContext namespaceContext = new SimpleNamespaceContext();
@@ -55,6 +58,10 @@ public class AppendUrlsetNameStrategy implements AggregationStrategy {
                     .evaluate(fedoraObjectInformationResponse, XPathConstants.STRING).toString();
         } catch (XPathExpressionException e) {
             System.out.println("error getting tenant/objOwnerId for object.");
+        }
+        // map tenant-name to DNS-Entries.
+        if (tenants.containsKey(tenant)) {
+            tenant = tenants.get(tenant);
         }
 
         // append tenant (urlset-name)

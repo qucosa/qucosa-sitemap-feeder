@@ -11,21 +11,25 @@ import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.component.kafka.KafkaComponent;
 import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.camel.processor.aggregate.AggregationStrategy;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 
 import javax.servlet.http.HttpServletResponse;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @Component
 public class ActiveMqRoute extends RouteBuilder {
+    @Value("#{${tenant.map}}")
+    private Map<String, String> tenantmap;
 
     @Override
     public void configure() {
         UrlsetFormatProcessor urlsetFormatProcessor = new UrlsetFormatProcessor();
         UrlFormatProcessor urlFormatProcessor = new UrlFormatProcessor();
         AMQMessageProcessor amqMessageProcessor = new AMQMessageProcessor();
-        AggregationStrategy appendUrlsetName = new AppendUrlsetNameStrategy();
+        AggregationStrategy appendUrlsetName = new AppendUrlsetNameStrategy(tenantmap);
         SetupJsonForBulkInsert jsonForBulkInsert = new SetupJsonForBulkInsert();
 
         Namespaces ns = new Namespaces("atom", "http://www.w3.org/2005/Atom")
