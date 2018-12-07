@@ -186,14 +186,8 @@ public class ActiveMqRoute extends RouteBuilder {
         // Send XML to ExistDB
         from("kafka:mets_updates?groupId=existdb_feeder")
                 .id("existdb_feeder")
-                .noAutoStartup()
-                .setProperty("pid", header(KafkaConstants.KEY))
-                .process(exchange -> {
-                    String pid = exchange.getIn().getHeader(KafkaConstants.KEY, String.class);
-                    exchange.getIn().setHeader(Exchange.HTTP_PATH,
-                            String.format("/db/qucosa/mets/test/%s.mets.xml", pid.replaceFirst(":", "-")));
-                    exchange.setProperty("pid", pid);
-                })
+                .setHeader("pid", header(KafkaConstants.KEY).regexReplaceAll(":", "-"))
+                .setHeader(Exchange.HTTP_PATH, simple("{{existdb.document.path}}/${header[pid]}.mets.xml"))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.PUT))
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/xml"))
