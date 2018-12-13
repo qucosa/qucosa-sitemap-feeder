@@ -28,8 +28,8 @@ public class ActiveMqRoute extends RouteBuilder {
         AggregationStrategy appendUrlsetName = new AppendUrlsetNameStrategy(tenantmap);
         SetupJsonForBulkInsert jsonForBulkInsert = new SetupJsonForBulkInsert();
 
-        Namespaces ns = new Namespaces("atom", "http://www.w3.org/2005/Atom")
-                .add("mets", "http://www.loc.gov/METS/");
+//        Namespaces ns = new Namespaces("atom", "http://www.w3.org/2005/Atom")
+//                .add("mets", "http://www.loc.gov/METS/");
 
         // setup kafka component with the brokers
         KafkaComponent kafka = new KafkaComponent();
@@ -54,13 +54,10 @@ public class ActiveMqRoute extends RouteBuilder {
                 .to("kafka:sitemap_feeder")
         ;
 
-
         from("kafka:sitemap_feeder")
                 .id("sitemap_feeder")
-                .log("sitemap_feeder body: ${body}")
                 // appends tenant (urlset-name) to object-information in body
                 .enrich("direct:objectinfo", appendUrlsetName)
-                .log("sitemap_feeder body after enrich: ${body}")
                 .choice()
                 .when().jsonpath("$.[?(@.method == 'ingest')]")
                     .multicast()
@@ -92,7 +89,6 @@ public class ActiveMqRoute extends RouteBuilder {
         from("direct:sitemap_create_urlset")
                 // set json-format for urlset's with tenantname (urlset-uri)
                 .process(urlsetFormatProcessor)
-                .log("create_urlset (json): ${body}")
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
