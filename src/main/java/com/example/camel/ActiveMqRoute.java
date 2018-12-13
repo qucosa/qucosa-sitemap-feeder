@@ -45,7 +45,9 @@ public class ActiveMqRoute extends RouteBuilder {
                 .id("fcrepo_updates")
                 // XML-to-JSON-mapping of relevant information
                 .process(amqMessageProcessor)
-                .to("kafka:fcrepo_updates", "kafka:sitemap_feeder")
+                .multicast()
+                    .to("kafka:fcrepo_updates")
+                    .to("kafka:sitemap_feeder")
         ;
 
         // route to update sitemap via pid's (post qucosa-ID's (qucosa:12345) to kafka topic "pidupdate")
