@@ -1,9 +1,9 @@
-package com.example.camel;
+package de.qucosa.camel;
 
-import com.example.camel.camelprocessors.AMQMessageProcessor;
-import com.example.camel.camelprocessors.SetupJsonForBulkInsert;
-import com.example.camel.camelprocessors.UrlFormatProcessor;
-import com.example.camel.camelprocessors.UrlsetFormatProcessor;
+import de.qucosa.camel.camelprocessors.AMQMessageProcessor;
+import de.qucosa.camel.camelprocessors.SetupJsonForBulkInsert;
+import de.qucosa.camel.camelprocessors.UrlFormatProcessor;
+import de.qucosa.camel.camelprocessors.UrlsetFormatProcessor;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.builder.xml.Namespaces;

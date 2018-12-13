@@ -1,4 +1,4 @@
-package com.example.camel;
+package de.qucosa.camel;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;

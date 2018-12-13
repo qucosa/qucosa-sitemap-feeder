@@ -15,9 +15,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.example.camel.camelprocessors;
+package de.qucosa.camel.camelprocessors;
 
-import com.example.camel.utils.Utils;
+import de.qucosa.camel.utils.Utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.camel.Exchange;

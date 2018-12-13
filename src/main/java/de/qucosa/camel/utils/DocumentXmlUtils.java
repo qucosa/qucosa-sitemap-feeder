@@ -15,7 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.example.camel.utils;
+package de.qucosa.camel.utils;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.xml.serialize.OutputFormat;
