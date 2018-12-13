@@ -9,16 +9,11 @@ import org.slf4j.LoggerFactory;
 
 public class UnitTests extends CamelTestSupport {
 
-    private Logger log = LoggerFactory.getLogger(UnitTests.class);
+    private final Logger log = LoggerFactory.getLogger(UnitTests.class);
 
     @Override
     protected RouteBuilder createRouteBuilder() {
         return new ActiveMqRoute();
-    }
-
-    @Test
-    public void hello() {
-        log.info("Hello!");
     }
 
     @Test

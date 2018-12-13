@@ -44,10 +44,10 @@ public class Utils {
     public static String getCurrentW3cDatetime() {
         DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
         format.setTimeZone(TimeZone.getTimeZone("GMT"));
-        String w3cDatetimeString = format.format(new Date())+"+00:00";
-        return w3cDatetimeString;
+        return format.format(new Date())+"+00:00";
     }
 
+    // TODO conversion if needed
     public static String toW3cDatetime(String date) {
         DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
         format.setTimeZone(TimeZone.getTimeZone("GMT"));

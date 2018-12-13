@@ -9,15 +9,11 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.builder.xml.Namespaces;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.component.kafka.KafkaComponent;
-import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.camel.processor.aggregate.AggregationStrategy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.w3c.dom.Document;
 
-import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 @Component
 public class ActiveMqRoute extends RouteBuilder {
@@ -46,7 +42,7 @@ public class ActiveMqRoute extends RouteBuilder {
                 // XML-to-JSON-mapping of relevant information
                 .process(amqMessageProcessor)
                 .multicast()
-                    .to("kafka:fcrepo_updates")
+//                    .to("kafka:fcrepo_updates")
                     .to("kafka:sitemap_feeder")
         ;
 
@@ -58,20 +54,6 @@ public class ActiveMqRoute extends RouteBuilder {
                 .to("kafka:sitemap_feeder")
         ;
 
-        // Obtain and post METS XML to Kafka topic
-        from("kafka:fcrepo_updates?groupId=mets_dissemination")
-                .id("mets_update")
-                .transform(jsonpath("$.pid"))
-                .resequence().body().timeout(TimeUnit.SECONDS.toMillis(5))
-                .setProperty("pid", body())
-                .setHeader(Exchange.HTTP_QUERY, simple("pid=${exchangeProperty[pid]}"))
-                .throttle(1)
-                .to("http4://{{fedora.host}}:{{fedora.port}}/mets")
-                .convertBodyTo(Document.class, "UTF-8")
-                .setHeader(KafkaConstants.KEY, exchangeProperty("pid"))
-                .setProperty("tenant", xpath("//mets:mets/mets:metsHdr/mets:agent/mets:name").namespaces(ns))
-                .to("kafka:mets_updates")
-        ;
 
         from("kafka:sitemap_feeder")
                 .id("sitemap_feeder")
@@ -150,6 +132,7 @@ public class ActiveMqRoute extends RouteBuilder {
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .to("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false");
 
+        /*
         //TODO modify-route
         from("direct:sitemap_create_or_modify_urlset")
                 // create urlset if missing
@@ -182,7 +165,9 @@ public class ActiveMqRoute extends RouteBuilder {
                 .to("direct:sitemap_create_urlset", "direct:sitemap_create_url")
                 .endChoice()
         ;
+        */
 
+        /*
         // Send XML to ExistDB
         from("kafka:mets_updates?groupId=existdb_feeder")
                 .id("existdb_feeder")
@@ -197,5 +182,23 @@ public class ActiveMqRoute extends RouteBuilder {
                         "&authPassword={{existdb.pw}}")
                 .log("Updated ${header.CamelHttpPath}")
         ;
+        +/
+
+        /*
+        // Obtain and post METS XML to Kafka topic
+        from("kafka:fcrepo_updates?groupId=mets_dissemination")
+                .id("mets_update")
+                .transform(jsonpath("$.pid"))
+                .resequence().body().timeout(TimeUnit.SECONDS.toMillis(5))
+                .setProperty("pid", body())
+                .setHeader(Exchange.HTTP_QUERY, simple("pid=${exchangeProperty[pid]}"))
+                .throttle(1)
+                .to("http4://{{fedora.host}}:{{fedora.port}}/mets")
+                .convertBodyTo(Document.class, "UTF-8")
+                .setHeader(KafkaConstants.KEY, exchangeProperty("pid"))
+                .setProperty("tenant", xpath("//mets:mets/mets:metsHdr/mets:agent/mets:name").namespaces(ns))
+                .to("kafka:mets_updates")
+        ;
+        */
     }
 }
