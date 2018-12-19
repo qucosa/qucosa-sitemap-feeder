@@ -6,7 +6,6 @@ import de.qucosa.camel.camelprocessors.UrlFormatProcessor;
 import de.qucosa.camel.camelprocessors.UrlsetFormatProcessor;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.builder.xml.Namespaces;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.component.kafka.KafkaComponent;
 import org.apache.camel.processor.aggregate.AggregationStrategy;
@@ -27,9 +26,6 @@ public class ActiveMqRoute extends RouteBuilder {
         AMQMessageProcessor amqMessageProcessor = new AMQMessageProcessor();
         AggregationStrategy appendUrlsetName = new AppendUrlsetNameStrategy(tenantmap);
         SetupJsonForBulkInsert jsonForBulkInsert = new SetupJsonForBulkInsert();
-
-//        Namespaces ns = new Namespaces("atom", "http://www.w3.org/2005/Atom")
-//                .add("mets", "http://www.loc.gov/METS/");
 
         // setup kafka component with the brokers
         KafkaComponent kafka = new KafkaComponent();
