@@ -34,12 +34,12 @@ public class UrlFormatProcessor implements Processor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        String uriTemplate = "##protocol##://##tenant##.qucosa.de/id/##pid##";
+        String uriTemplate = "##protocol##://##tenant##/id/##pid##";
         String originalJsonString = exchange.getIn().getBody(String.class);
 
         ObjectMapper mapper = new ObjectMapper();
         JsonNode jsonNode = mapper.readTree(originalJsonString);
-        String tenant = jsonNode.get("tenant").asText();
+        String tenant = jsonNode.get("tenant_url").asText();
         String encodedpid = jsonNode.get("encodedpid").asText();
 
         // convert ...-date to w3c-datetime for sitemap-entry

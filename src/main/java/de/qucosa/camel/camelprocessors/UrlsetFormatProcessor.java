@@ -36,7 +36,7 @@ public class UrlsetFormatProcessor implements Processor {
 
         ObjectMapper mapper = new ObjectMapper();
         JsonNode jsonNode = mapper.readTree(originalJsonString);
-        String tenant = jsonNode.get("tenant").asText();
+        String tenant = jsonNode.get("tenant_urlset").asText();
 
         ObjectNode urlsetJsonFormat = mapper.createObjectNode();
         urlsetJsonFormat.put("uri", tenant);

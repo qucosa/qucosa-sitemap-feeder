@@ -34,12 +34,14 @@ import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
 import java.util.Map;
 
-public class AppendUrlsetNameStrategy implements AggregationStrategy {
+public class AppendTenantStrategy implements AggregationStrategy {
     private final XPath xPath =  XPathFactory.newInstance().newXPath();
-    private final Map<String, String> tenants;
+    private final Map<String, String> tenantsShort;
+    private final Map<String, String> tenantsLong;
 
-    public AppendUrlsetNameStrategy(Map<String, String> tenantmap) {
-        this.tenants = tenantmap;
+    public AppendTenantStrategy(Map<String, String> tenantShortMap, Map<String, String> tenantLongMap) {
+        this.tenantsShort = tenantShortMap;
+        this.tenantsLong = tenantLongMap;
         DocumentBuilderFactory documentFactory = DocumentBuilderFactory.newInstance();
         documentFactory.setNamespaceAware(true);
         SimpleNamespaceContext namespaceContext = new SimpleNamespaceContext();
@@ -52,16 +54,21 @@ public class AppendUrlsetNameStrategy implements AggregationStrategy {
         String originalJsonBody = original.getIn().getBody(String.class);
         Document fedoraObjectInformationResponse = resource.getIn().getBody(Document.class);
 
-        String tenant = null;
+        String fedoraTenantName = null;
         try {
-            tenant = xPath.compile("//obj:objectProfile/obj:objOwnerId/text()")
+            fedoraTenantName = xPath.compile("//obj:objectProfile/obj:objOwnerId/text()")
                     .evaluate(fedoraObjectInformationResponse, XPathConstants.STRING).toString();
         } catch (XPathExpressionException e) {
             System.out.println("error getting tenant/objOwnerId for object.");
         }
         // map tenant-name to DNS-Entries.
-        if (tenants.containsKey(tenant)) {
-            tenant = tenants.get(tenant);
+        String tenantShort = null;
+        if (tenantsShort.containsKey(fedoraTenantName)) {
+            tenantShort = tenantsShort.get(fedoraTenantName);
+        }
+        String tenantLong = null;
+        if (tenantsShort.containsKey(fedoraTenantName)) {
+            tenantLong = tenantsLong.get(fedoraTenantName);
         }
 
         // append tenant (urlset-name)
@@ -70,7 +77,13 @@ public class AppendUrlsetNameStrategy implements AggregationStrategy {
             JsonNode jsonInfo = mapper.readTree(originalJsonBody);
 
             ObjectNode node = (ObjectNode) jsonInfo;
-            node.put("tenant", tenant);
+
+            if (tenantShort == null || tenantLong == null) {
+                throw new IOException("Fedora Tenant '" + fedoraTenantName
+                        + "' can't be found in tenant-maps (application.properties)");
+            }
+            node.put("tenant_urlset", tenantShort);
+            node.put("tenant_url", tenantLong);
 
             original.getIn().setBody(node.toString(), JsonObject.class);
         } catch (IOException e) {

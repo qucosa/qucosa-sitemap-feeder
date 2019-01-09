@@ -16,15 +16,18 @@ import java.util.Map;
 
 @Component
 public class ActiveMqRoute extends RouteBuilder {
-    @Value("#{${tenant.map}}")
-    private Map<String, String> tenantmap;
+    @Value("#{${tenantShort.map}}")
+    private Map<String, String> tenantShortMap;
+
+    @Value("#{${tenantLong.map}}")
+    private Map<String, String> tenantLongMap;
 
     @Override
     public void configure() {
         UrlsetFormatProcessor urlsetFormatProcessor = new UrlsetFormatProcessor();
         UrlFormatProcessor urlFormatProcessor = new UrlFormatProcessor();
         AMQMessageProcessor amqMessageProcessor = new AMQMessageProcessor();
-        AggregationStrategy appendUrlsetName = new AppendUrlsetNameStrategy(tenantmap);
+        AggregationStrategy appendUrlsetName = new AppendTenantStrategy(tenantShortMap, tenantLongMap);
         SetupJsonForBulkInsert jsonForBulkInsert = new SetupJsonForBulkInsert();
 
         // setup kafka component with the brokers
@@ -95,7 +98,7 @@ public class ActiveMqRoute extends RouteBuilder {
 
         from("direct:sitemap_create_url")
                 // create urlset if missing
-                .setProperty("tenant", jsonpath("$.tenant"))
+                .setProperty("tenant", jsonpath("$.tenant_urlset"))
                 .process(urlFormatProcessor)
                 .log("create_url (json): ${body}")
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
@@ -106,18 +109,18 @@ public class ActiveMqRoute extends RouteBuilder {
                 .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}"));
 
         from("direct:sitemap_delete_urlset")
-                .setProperty("tenant", jsonpath("$.tenant"))
+                .setProperty("tenant", jsonpath("$.tenant_urlset"))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
                 .to("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false");
 
         from("direct:sitemap_delete_url")
-                .setProperty("tenant", jsonpath("$.tenant"))
+                .setProperty("tenant", jsonpath("$.tenant_urlset"))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
                 .process(urlFormatProcessor)
                 .to("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}/deleteurl?throwExceptionOnFailure=false");
 
         from("direct:sitemap_modify_url_lastmod")
-                .setProperty("tenant", jsonpath("$.tenant"))
+                .setProperty("tenant", jsonpath("$.tenant_urlset"))
                 .process(urlFormatProcessor)
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.PUT))
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
