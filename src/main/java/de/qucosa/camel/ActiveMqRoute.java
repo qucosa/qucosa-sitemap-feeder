@@ -94,7 +94,7 @@ public class ActiveMqRoute extends RouteBuilder {
                 .throttle(10)
                 // throwExceptionOnFailure set to false to disable camel from throwing HttpOperationFailedException
                 // on response-codes 300+
-                .to("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets?throwExceptionOnFailure=false");
+                .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets?throwExceptionOnFailure=false"));
 
         from("direct:sitemap_create_url")
                 // create urlset if missing
@@ -111,13 +111,13 @@ public class ActiveMqRoute extends RouteBuilder {
         from("direct:sitemap_delete_urlset")
                 .setProperty("tenant", jsonpath("$.tenant_urlset"))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
-                .to("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false");
+                .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false"));
 
         from("direct:sitemap_delete_url")
                 .setProperty("tenant", jsonpath("$.tenant_urlset"))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
                 .process(urlFormatProcessor)
-                .to("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}/deleteurl?throwExceptionOnFailure=false");
+                .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}/deleteurl?throwExceptionOnFailure=false"));
 
         from("direct:sitemap_modify_url_lastmod")
                 .setProperty("tenant", jsonpath("$.tenant_urlset"))
@@ -125,75 +125,6 @@ public class ActiveMqRoute extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.PUT))
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-                .to("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false");
-
-        /*
-        //TODO modify-route
-        from("direct:sitemap_create_or_modify_urlset")
-                // create urlset if missing
-                .setProperty("pid", header(KafkaConstants.KEY))
-                .process(urlsetFormatProcessor)
-                .log("tenantname: ${body}")
-                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
-                .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
-                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-                .throttle(10)
-                .to("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets?throwExceptionOnFailure=false")
-                .process(exchange -> {
-                    HttpServletResponse response = exchange.getIn().getBody(HttpServletResponse.class);
-                    int statuscode = response.getStatus();
-
-                    if (statuscode == 404) {
-                        exchange.setProperty("urlset_available", true);
-                    }
-                    // urlset already created, statuscode 208 = already reported
-                    if (statuscode == 208) {
-
-                    } else {
-                        exchange.setProperty("urlset_available", false);
-                    }
-                })
-                .choice()
-                    .when().simple("${exchangeProperty.urlset_available} == 'true'")
-                .multicast()
-                .parallelProcessing(false)
-                .to("direct:sitemap_create_urlset", "direct:sitemap_create_url")
-                .endChoice()
-        ;
-        */
-
-        /*
-        // Send XML to ExistDB
-        from("kafka:mets_updates?groupId=existdb_feeder")
-                .id("existdb_feeder")
-                .setHeader("pid", header(KafkaConstants.KEY).regexReplaceAll(":", "-"))
-                .setHeader(Exchange.HTTP_PATH, simple("{{existdb.document.path}}/${header[pid]}.mets.xml"))
-                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.PUT))
-                .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
-                .setHeader(Exchange.CONTENT_TYPE, constant("application/xml"))
-                .throttle(10)
-                .to("http4://{{existdb.host}}:{{existdb.port}}/exist/rest" +
-                        "?authUsername={{existdb.user}}" +
-                        "&authPassword={{existdb.pw}}")
-                .log("Updated ${header.CamelHttpPath}")
-        ;
-        +/
-
-        /*
-        // Obtain and post METS XML to Kafka topic
-        from("kafka:fcrepo_updates?groupId=mets_dissemination")
-                .id("mets_update")
-                .transform(jsonpath("$.pid"))
-                .resequence().body().timeout(TimeUnit.SECONDS.toMillis(5))
-                .setProperty("pid", body())
-                .setHeader(Exchange.HTTP_QUERY, simple("pid=${exchangeProperty[pid]}"))
-                .throttle(1)
-                .to("http4://{{fedora.host}}:{{fedora.port}}/mets")
-                .convertBodyTo(Document.class, "UTF-8")
-                .setHeader(KafkaConstants.KEY, exchangeProperty("pid"))
-                .setProperty("tenant", xpath("//mets:mets/mets:metsHdr/mets:agent/mets:name").namespaces(ns))
-                .to("kafka:mets_updates")
-        ;
-        */
+                .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false"));
     }
 }
