@@ -1,6 +1,7 @@
 package de.qucosa.camel;
 
 import de.qucosa.camel.camelprocessors.AMQMessageProcessor;
+import de.qucosa.camel.camelprocessors.SetupJsonForBulkDelete;
 import de.qucosa.camel.camelprocessors.SetupJsonForBulkInsert;
 import de.qucosa.camel.camelprocessors.UrlFormatProcessor;
 import de.qucosa.camel.camelprocessors.UrlsetFormatProcessor;
@@ -29,6 +30,7 @@ public class ActiveMqRoute extends RouteBuilder {
         AMQMessageProcessor amqMessageProcessor = new AMQMessageProcessor();
         AggregationStrategy appendUrlsetName = new AppendTenantStrategy(tenantShortMap, tenantLongMap);
         SetupJsonForBulkInsert jsonForBulkInsert = new SetupJsonForBulkInsert();
+        SetupJsonForBulkDelete jsonForBulkDelete = new SetupJsonForBulkDelete();
 
         // setup kafka component with the brokers
         KafkaComponent kafka = new KafkaComponent();
@@ -53,31 +55,43 @@ public class ActiveMqRoute extends RouteBuilder {
                 .to("kafka:sitemap_feeder")
         ;
 
+        // route to update sitemap via pid's (post qucosa-ID's (qucosa:12345) to kafka topic "pidupdate")
+        from("kafka:piddelete")
+                .id("piddelete")
+                // set/get method/tenant/pid/encodedpid
+                .process(jsonForBulkDelete)
+                .to("kafka:sitemap_feeder")
+        ;
+
         from("kafka:sitemap_feeder")
                 .id("sitemap_feeder")
                 // appends tenant (urlset-name) to object-information in body
                 .enrich("direct:objectinfo", appendUrlsetName)
                 .choice()
-                .when().jsonpath("$.[?(@.method == 'ingest')]")
-                    .multicast()
-                    .parallelProcessing(false)
-                    .to("direct:sitemap_create_urlset", "direct:sitemap_create_url")
+                .when().jsonpath("$.[?(@.objectState != 'I')]")
+                    .when().jsonpath("$.[?(@.objectState != 'D')]")
+                        .when().jsonpath("$.[?(@.method == 'ingest')]")
+                            .multicast()
+                            .parallelProcessing(false)
+                            .to("direct:sitemap_create_urlset", "direct:sitemap_create_url")
+                            .endChoice()
+                        .when().jsonpath("$.[?(@.method == 'addDatastream')]")
+                            .multicast()
+                            .parallelProcessing(false)
+                            .to("direct:sitemap_modify_url_lastmod")
+                            .endChoice()
+                        .when().jsonpath("$.[?(@.method == 'purgeObject')]")
+                            .multicast()
+                            .parallelProcessing(false)
+                            .to("direct:sitemap_delete_url")
+                            .endChoice()
+                        .when().jsonpath("$.[?(@.method == 'modifyObject')]")
+                            .multicast()
+                            .parallelProcessing(false)
+                            .to("direct:sitemap_modify_url_lastmod")
+                            .endChoice()
                     .endChoice()
-                .when().jsonpath("$.[?(@.method == 'addDatastream')]")
-                    .multicast()
-                    .parallelProcessing(false)
-                    .to("direct:sitemap_modify_url_lastmod")
-                    .endChoice()
-                .when().jsonpath("$.[?(@.method == 'purgeObject')]")
-                    .multicast()
-                    .parallelProcessing(false)
-                    .to("direct:sitemap_delete_url", "direct:sitemap_update_urlset_lastmod")
-                    .endChoice()
-                .when().jsonpath("$.[?(@.method == 'modifyObject')]")
-                    .multicast()
-                    .parallelProcessing(false)
-                    .to("direct:sitemap_modify_url_lastmod")
-                    .endChoice()
+                .endChoice()
                 .end();
 
         from("direct:objectinfo")
@@ -115,8 +129,10 @@ public class ActiveMqRoute extends RouteBuilder {
 
         from("direct:sitemap_delete_url")
                 .setProperty("tenant", jsonpath("$.tenant_urlset"))
-                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
                 .process(urlFormatProcessor)
+                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
+                .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
+                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}/deleteurl?throwExceptionOnFailure=false"));
 
         from("direct:sitemap_modify_url_lastmod")

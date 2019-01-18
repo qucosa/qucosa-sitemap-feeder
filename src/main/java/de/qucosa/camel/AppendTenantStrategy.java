@@ -55,8 +55,11 @@ public class AppendTenantStrategy implements AggregationStrategy {
         Document fedoraObjectInformationResponse = resource.getIn().getBody(Document.class);
 
         String fedoraTenantName = null;
+        String fedoraObjectState = null;
         try {
             fedoraTenantName = xPath.compile("//obj:objectProfile/obj:objOwnerId/text()")
+                    .evaluate(fedoraObjectInformationResponse, XPathConstants.STRING).toString();
+            fedoraObjectState = xPath.compile("//obj:objectProfile/obj:objState/text()")
                     .evaluate(fedoraObjectInformationResponse, XPathConstants.STRING).toString();
         } catch (XPathExpressionException e) {
             System.out.println("error getting tenant/objOwnerId for object.");
@@ -82,8 +85,12 @@ public class AppendTenantStrategy implements AggregationStrategy {
                 throw new IOException("Fedora Tenant '" + fedoraTenantName
                         + "' can't be found in tenant-maps (application.properties)");
             }
+            if (fedoraObjectState == null) {
+                throw new IOException("Fedora Object state missing.");
+            }
             node.put("tenant_urlset", tenantShort);
             node.put("tenant_url", tenantLong);
+            node.put("objectState", fedoraObjectState);
 
             original.getIn().setBody(node.toString(), JsonObject.class);
         } catch (IOException e) {
