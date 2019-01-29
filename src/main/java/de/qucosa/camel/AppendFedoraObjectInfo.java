@@ -34,12 +34,12 @@ import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
 import java.util.Map;
 
-public class AppendTenantStrategy implements AggregationStrategy {
+public class AppendFedoraObjectInfo implements AggregationStrategy {
     private final XPath xPath =  XPathFactory.newInstance().newXPath();
     private final Map<String, String> tenantsShort;
     private final Map<String, String> tenantsLong;
 
-    public AppendTenantStrategy(Map<String, String> tenantShortMap, Map<String, String> tenantLongMap) {
+    public AppendFedoraObjectInfo(Map<String, String> tenantShortMap, Map<String, String> tenantLongMap) {
         this.tenantsShort = tenantShortMap;
         this.tenantsLong = tenantLongMap;
         DocumentBuilderFactory documentFactory = DocumentBuilderFactory.newInstance();

@@ -28,7 +28,7 @@ public class ActiveMqRoute extends RouteBuilder {
         UrlsetFormatProcessor urlsetFormatProcessor = new UrlsetFormatProcessor();
         UrlFormatProcessor urlFormatProcessor = new UrlFormatProcessor();
         AMQMessageProcessor amqMessageProcessor = new AMQMessageProcessor();
-        AggregationStrategy appendUrlsetName = new AppendTenantStrategy(tenantShortMap, tenantLongMap);
+        AggregationStrategy appendFedoraObjectInfo = new AppendFedoraObjectInfo(tenantShortMap, tenantLongMap);
         SetupJsonForBulkInsert jsonForBulkInsert = new SetupJsonForBulkInsert();
         SetupJsonForBulkDelete jsonForBulkDelete = new SetupJsonForBulkDelete();
 
@@ -48,7 +48,7 @@ public class ActiveMqRoute extends RouteBuilder {
         ;
 
         // route to update sitemap via pid's (post qucosa-ID's (qucosa:12345) to kafka topic "pidupdate")
-        from("kafka:pidupdate")
+        from("kafka:pidupdate?groupId=bulkinsert")
                 .id("pidupdate")
                 // set/get method/tenant/pid/encodedpid
                 .process(jsonForBulkInsert)
@@ -56,17 +56,17 @@ public class ActiveMqRoute extends RouteBuilder {
         ;
 
         // route to update sitemap via pid's (post qucosa-ID's (qucosa:12345) to kafka topic "pidupdate")
-        from("kafka:piddelete")
+        from("kafka:piddelete?groupId=bulkdelete")
                 .id("piddelete")
                 // set/get method/tenant/pid/encodedpid
                 .process(jsonForBulkDelete)
                 .to("kafka:sitemap_feeder")
         ;
 
-        from("kafka:sitemap_feeder")
+        from("kafka:sitemap_feeder?groupId=modifysitemap")
                 .id("sitemap_feeder")
-                // appends tenant (urlset-name) to object-information in body
-                .enrich("direct:objectinfo", appendUrlsetName)
+                // appends tenant (urlset-name) and objectState to JSON-body
+                .enrich("direct:objectinfo", appendFedoraObjectInfo)
                 .choice()
                 .when().jsonpath("$.[?(@.objectState != 'I')]")
                     .when().jsonpath("$.[?(@.objectState != 'D')]")

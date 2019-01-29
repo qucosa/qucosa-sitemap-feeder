@@ -32,6 +32,10 @@ import java.net.URLEncoder;
 
 public class AMQMessageProcessor implements Processor {
     private final XPath xPath =  XPathFactory.newInstance().newXPath();
+    private final String pidXpath = "/atom:entry/atom:summary[@type='text']/text()";
+    private final String dsidXpath = "/atom:entry/atom:category[@scheme='fedora-types:dsID']/@term";
+    private final String methodXpath = "/atom:entry/atom:title[@type='text']/text()";
+    private final String dateXpath = "/atom:entry/atom:updated/text()";
 
     public AMQMessageProcessor() {
         SimpleNamespaceContext namespaceContext = new SimpleNamespaceContext();
@@ -43,13 +47,13 @@ public class AMQMessageProcessor implements Processor {
     public void process(Exchange exchange) throws Exception {
         Document amqMessageDoc = exchange.getIn().getBody(Document.class);
 
-        String pid = xPath.compile("/atom:entry/atom:summary[@type='text']/text()")
+        String pid = xPath.compile(pidXpath)
                 .evaluate(amqMessageDoc, XPathConstants.STRING).toString();
-        String dsid = xPath.compile("/atom:entry/atom:category[@scheme='fedora-types:dsID']/@term")
+        String dsid = xPath.compile(dsidXpath)
                 .evaluate(amqMessageDoc, XPathConstants.STRING).toString();
-        String method = xPath.compile("/atom:entry/atom:title[@type='text']/text()")
+        String method = xPath.compile(methodXpath)
                 .evaluate(amqMessageDoc, XPathConstants.STRING).toString();
-        String modifiedDate = xPath.compile("/atom:entry/atom:updated/text()")
+        String modifiedDate = xPath.compile(dateXpath)
                 .evaluate(amqMessageDoc, XPathConstants.STRING).toString();
 
         ObjectMapper mapper = new ObjectMapper();
