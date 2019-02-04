@@ -82,7 +82,8 @@ public class BaseEmbeddedKafkaTest extends CamelTestSupport {
     @Override
     protected CamelContext createCamelContext() throws Exception {
         CamelContext context = super.createCamelContext();
-        context.addComponent("properties", new PropertiesComponent("ref:prop"));
+        PropertiesComponent component = new PropertiesComponent("ref:prop", "classpath:test-application.properties");
+        context.addComponent("properties", component);
 
         KafkaComponent kafka = new KafkaComponent(context);
         kafka.setBrokers("localhost:" + getKafkaPort());
