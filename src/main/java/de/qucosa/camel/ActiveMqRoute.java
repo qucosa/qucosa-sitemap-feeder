@@ -5,6 +5,7 @@ import de.qucosa.camel.camelprocessors.SetupJsonForBulkDelete;
 import de.qucosa.camel.camelprocessors.SetupJsonForBulkInsert;
 import de.qucosa.camel.camelprocessors.UrlFormatProcessor;
 import de.qucosa.camel.camelprocessors.UrlsetFormatProcessor;
+import de.qucosa.camel.utils.Utils;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.http4.HttpMethods;
@@ -32,12 +33,14 @@ public class ActiveMqRoute extends RouteBuilder {
         SetupJsonForBulkInsert jsonForBulkInsert = new SetupJsonForBulkInsert();
         SetupJsonForBulkDelete jsonForBulkDelete = new SetupJsonForBulkDelete();
 
-        /*
+
         // setup kafka component with the brokers
         KafkaComponent kafka = new KafkaComponent();
         kafka.setBrokers("{{kafka.broker.host}}:{{kafka.broker.port}}");
-        getContext().addComponent("kafka", kafka);
-        */
+
+        if (getContext().getComponent("kafka") == null) {
+            getContext().addComponent("kafka", kafka);
+        }
 
         // Transport updated PIDs to Kafka topic
         from("activemq:topic:fedora.apim.update")
