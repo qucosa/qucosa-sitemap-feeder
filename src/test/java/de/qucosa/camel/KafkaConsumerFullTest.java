@@ -16,7 +16,6 @@
  */
 package de.qucosa.camel;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.StreamSupport;
@@ -55,7 +54,7 @@ public class KafkaConsumerFullTest extends BaseEmbeddedKafkaTest {
 
     @Before
     public void before() {
-        Properties props = getDefaultProperties();
+        Properties props = getDefaultProducerProperties();
         producer = new org.apache.kafka.clients.producer.KafkaProducer<>(props);
     }
 

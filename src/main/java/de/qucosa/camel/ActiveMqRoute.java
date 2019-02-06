@@ -5,7 +5,6 @@ import de.qucosa.camel.camelprocessors.SetupJsonForBulkDelete;
 import de.qucosa.camel.camelprocessors.SetupJsonForBulkInsert;
 import de.qucosa.camel.camelprocessors.UrlFormatProcessor;
 import de.qucosa.camel.camelprocessors.UrlsetFormatProcessor;
-import de.qucosa.camel.utils.Utils;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.http4.HttpMethods;
@@ -16,6 +15,15 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
+import static de.qucosa.camel.utils.RouteIds.ACTIVEMQ_ROUTE;
+import static de.qucosa.camel.utils.RouteIds.APPEND_FEDORA_OBJ_INFO;
+import static de.qucosa.camel.utils.RouteIds.HTTP_ADD_DATASTREAM_ID;
+import static de.qucosa.camel.utils.RouteIds.HTTP_INGEST_ID;
+import static de.qucosa.camel.utils.RouteIds.HTTP_MODIFY_OBJECT_ID;
+import static de.qucosa.camel.utils.RouteIds.HTTP_PURGE_OBJECT_ID;
+import static de.qucosa.camel.utils.RouteIds.KAFKA_BULK_DELETE_ROUTE;
+import static de.qucosa.camel.utils.RouteIds.KAFKA_BULK_INSERT_ROUTE;
+import static de.qucosa.camel.utils.RouteIds.SITEMAP_FEEDER_ROUTE;
 @Component
 public class ActiveMqRoute extends RouteBuilder {
     @Value("#{${tenantShort.map}}")
@@ -44,60 +52,59 @@ public class ActiveMqRoute extends RouteBuilder {
 
         // Transport updated PIDs to Kafka topic
         from("activemq:topic:fedora.apim.update")
-                .routeId("amqMessage")
+                .routeId(ACTIVEMQ_ROUTE)
                 // XML-to-JSON-mapping of relevant information
                 .process(amqMessageProcessor)
-                .log("AMQMESSAGE: ${body}")
-                .to("kafka:sitemap_feeder")
+                .to("kafka:sitemap_feeder?groupId=modifysitemap")
         ;
 
         // route to update sitemap via pid's (post qucosa-ID's (qucosa:12345) to kafka topic "pidupdate")
         from("kafka:pidupdate?groupId=bulkinsert")
-                .routeId("pidupdate")
+                .routeId(KAFKA_BULK_INSERT_ROUTE)
                 // set/get method/tenant/pid/encodedpid
                 .process(jsonForBulkInsert)
-                .to("kafka:sitemap_feeder")
+                .to("kafka:sitemap_feeder?groupId=modifysitemap")
         ;
 
         // route to update sitemap via pid's (post qucosa-ID's (qucosa:12345) to kafka topic "pidupdate")
         from("kafka:piddelete?groupId=bulkdelete")
-                .routeId("piddelete")
+                .routeId(KAFKA_BULK_DELETE_ROUTE)
                 // set/get method/tenant/pid/encodedpid
                 .process(jsonForBulkDelete)
-                .to("kafka:sitemap_feeder")
+                .to("kafka:sitemap_feeder?groupId=modifysitemap")
         ;
 
         from("kafka:sitemap_feeder?groupId=modifysitemap")
-                .routeId("sitemap_feeder")
+                .routeId(SITEMAP_FEEDER_ROUTE)
                 // appends tenant (urlset-name) and objectState to JSON-body
                 .enrich("direct:objectinfo", appendFedoraObjectInfo)
-                .id("appendFedoraObjectInfo")
+                .id(APPEND_FEDORA_OBJ_INFO)
                 .choice()
-                .when().jsonpath("$.[?(@.objectState != 'I')]")
-                    .when().jsonpath("$.[?(@.objectState != 'D')]")
-                        .when().jsonpath("$.[?(@.method == 'ingest')]")
-                            .multicast()
-                            .parallelProcessing(false)
-                            .to("direct:sitemap_create_urlset", "direct:sitemap_create_url")
-                            .endChoice()
-                        .when().jsonpath("$.[?(@.method == 'addDatastream')]")
-                            .multicast()
-                            .parallelProcessing(false)
-                            .to("direct:sitemap_modify_url_lastmod")
-                            .endChoice()
-                        .when().jsonpath("$.[?(@.method == 'purgeObject')]")
-                            .multicast()
-                            .parallelProcessing(false)
-                            .to("direct:sitemap_delete_url")
-                            .endChoice()
-                        .when().jsonpath("$.[?(@.method == 'modifyObject')]")
-                            .multicast()
-                            .parallelProcessing(false)
-                            .to("direct:sitemap_modify_url_lastmod")
-                            .endChoice()
-                    .endChoice()
+                    .when().jsonpath("$.[?(@.objectState != 'I')]")
+                        .choice()
+                            .when().jsonpath("$.[?(@.objectState != 'D')]")
+                                .choice()
+                                    .when().jsonpath("$.[?(@.method == 'addDatastream')]")
+                                        .to("direct:sitemap_modify_url_lastmod")
+                                        .id(HTTP_ADD_DATASTREAM_ID)
+                                    .when().jsonpath("$.[?(@.method == 'ingest')]")
+                                        .multicast()
+                                        .parallelProcessing(false)
+                                        .to("direct:sitemap_create_urlset", "direct:sitemap_create_url")
+                                        .id(HTTP_INGEST_ID)
+                                        .endChoice()
+                                    .when().jsonpath("$.[?(@.method == 'purgeObject')]")
+                                        .to("direct:sitemap_delete_url")
+                                        .id(HTTP_PURGE_OBJECT_ID)
+                                    .when().jsonpath("$.[?(@.method == 'modifyObject')]")
+                                        .to("direct:sitemap_modify_url_lastmod")
+                                        .id(HTTP_MODIFY_OBJECT_ID)
+                                .endChoice()
+                            .otherwise().to("mock:deleted_doc")
+                        .endChoice()
+                    .otherwise().to("mock:inactive_doc")
                 .endChoice()
-                .end();
+        ;
 
         from("direct:objectinfo")
                 .setProperty("encodedpid", jsonpath("$.encodedpid"))
@@ -115,7 +122,7 @@ public class ActiveMqRoute extends RouteBuilder {
                 // throwExceptionOnFailure set to false to disable camel from throwing HttpOperationFailedException
                 // on response-codes 300+
                 .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets?throwExceptionOnFailure=false"))
-                .id("toCreateUrlset");
+        ;
 
         from("direct:sitemap_create_url")
                 .routeId("createUrlRoute")
@@ -129,14 +136,14 @@ public class ActiveMqRoute extends RouteBuilder {
                 .setHeader("pid", exchangeProperty("pid"))
                 .throttle(10)
                 .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}"))
-                .id("toCreateUrl");
+        ;
 
         from("direct:sitemap_delete_urlset")
                 .routeId("deleteUrlsetRoute")
                 .setProperty("tenant", jsonpath("$.tenant_urlset"))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
                 .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false"))
-                .id("toDeleteUrlset");
+        ;
 
         from("direct:sitemap_delete_url")
                 .routeId("deleteUrlRoute")
@@ -146,7 +153,7 @@ public class ActiveMqRoute extends RouteBuilder {
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}/deleteurl?throwExceptionOnFailure=false"))
-                .id("toDeleteUrl");
+        ;
 
         from("direct:sitemap_modify_url_lastmod")
                 .routeId("modifyUrlRoute")
@@ -156,6 +163,6 @@ public class ActiveMqRoute extends RouteBuilder {
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false"))
-                .id("toModifyUrl");
+        ;
     }
 }

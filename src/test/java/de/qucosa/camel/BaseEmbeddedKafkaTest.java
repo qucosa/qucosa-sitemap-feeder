@@ -17,23 +17,23 @@
 
 package de.qucosa.camel;
 
-import java.util.Properties;
-
-
 import org.apache.camel.CamelContext;
-import org.apache.camel.component.kafka.embedded.EmbeddedKafkaBroker;
-import org.apache.camel.component.kafka.embedded.EmbeddedZookeeper;
 import org.apache.camel.component.kafka.KafkaComponent;
 import org.apache.camel.component.kafka.KafkaConstants;
+import org.apache.camel.component.kafka.embedded.EmbeddedKafkaBroker;
+import org.apache.camel.component.kafka.embedded.EmbeddedZookeeper;
 import org.apache.camel.component.properties.PropertiesComponent;
 import org.apache.camel.impl.JndiRegistry;
 import org.apache.camel.test.AvailablePortFinder;
 import org.apache.camel.test.junit4.CamelTestSupport;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Properties;
 
 
 public class BaseEmbeddedKafkaTest extends CamelTestSupport {
@@ -57,7 +57,7 @@ public class BaseEmbeddedKafkaTest extends CamelTestSupport {
         LOG.info("### Embedded Kafka cluster broker list: " + kafkaBroker.getBrokerList());
     }
 
-    protected Properties getDefaultProperties() {
+    protected Properties getDefaultProducerProperties() {
         Properties props = new Properties();
         LOG.info("Connecting to Kafka port {}", kafkaBroker.getPort());
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaBroker.getBrokerList());
@@ -65,6 +65,20 @@ public class BaseEmbeddedKafkaTest extends CamelTestSupport {
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaConstants.KAFKA_DEFAULT_SERIALIZER);
         props.put(ProducerConfig.PARTITIONER_CLASS_CONFIG, KafkaConstants.KAFKA_DEFAULT_PARTITIONER);
         props.put(ProducerConfig.ACKS_CONFIG, "1");
+        return props;
+    }
+
+    protected Properties getDefaultConsumerProperties() {
+        Properties props = new Properties();
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put("bootstrap.servers", "localhost:9092");
+        props.put("group.id", "modifysitemap");
+        props.put("enable.auto.commit", "true");
+        props.put("auto.commit.interval.ms", "1000");
+        props.put("session.timeout.ms", "30000");
+        props.put("key.deserializer","org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("value.deserializer","org.apache.kafka.common.serialization.StringDeserializer");
+//        props.put("partition.assignment.strategy", "range");
         return props;
     }
 
