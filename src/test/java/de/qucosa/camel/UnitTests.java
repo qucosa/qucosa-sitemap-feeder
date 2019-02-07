@@ -26,7 +26,6 @@ public class UnitTests extends BaseEmbeddedKafkaTest {
     private final String OBJECTSTATE_DELETED = "D";
     private final String OBJECTSTATE_ACTIVE = "A";
 
-
     @EndpointInject(uri = "kafka:" + FEEDER_TOPIC
         + "?groupId=" + MODIFY_GROUP
         + "&autoOffsetReset=earliest"

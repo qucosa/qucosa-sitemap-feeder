@@ -96,7 +96,7 @@ public class BaseEmbeddedKafkaTest extends CamelTestSupport {
     @Override
     protected CamelContext createCamelContext() throws Exception {
         CamelContext context = super.createCamelContext();
-        PropertiesComponent component = new PropertiesComponent("ref:prop", "classpath:test-application.properties");
+        PropertiesComponent component = new PropertiesComponent("ref:prop", "classpath:application-test.properties");
         context.addComponent("properties", component);
 
         KafkaComponent kafka = new KafkaComponent(context);
