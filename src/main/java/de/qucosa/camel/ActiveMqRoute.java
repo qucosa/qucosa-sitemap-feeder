@@ -5,6 +5,7 @@ import de.qucosa.camel.camelprocessors.SetupJsonForBulkDelete;
 import de.qucosa.camel.camelprocessors.SetupJsonForBulkInsert;
 import de.qucosa.camel.camelprocessors.UrlFormatProcessor;
 import de.qucosa.camel.camelprocessors.UrlsetFormatProcessor;
+import de.qucosa.camel.utils.Utils;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.http4.HttpMethods;
@@ -43,10 +44,13 @@ public class ActiveMqRoute extends RouteBuilder {
 
 
         // setup kafka component with the brokers
-        KafkaComponent kafka = new KafkaComponent();
-        kafka.setBrokers("{{kafka.broker.host}}:{{kafka.broker.port}}");
+        KafkaComponent kafka;
 
-        if (getContext().getComponent("kafka") == null) {
+        kafka = (KafkaComponent) getContext().getComponent("kafka");
+        // in case KafkaComponent is set already (Unit-/Route-Tests)
+        if (Utils.empty(kafka.getBrokers())) {
+            getContext().removeComponent("kafka");
+            kafka.setBrokers("{{kafka.broker.host}}:{{kafka.broker.port}}");
             getContext().addComponent("kafka", kafka);
         }
 
