@@ -100,7 +100,6 @@ public class UnitTests extends BaseEmbeddedKafkaTest {
         docHasStateInactiveEndpoint.expectedMessageCount(1);
         context.start();
         docHasStateInactiveEndpoint.assertIsSatisfied();
-        context.stop();
     }
 
     @Test
@@ -113,7 +112,6 @@ public class UnitTests extends BaseEmbeddedKafkaTest {
         docHasStateDeletedEndpoint.expectedMessageCount(1);
         context.start();
         docHasStateDeletedEndpoint.assertIsSatisfied();
-        context.stop();
     }
 
     @Test
@@ -126,7 +124,6 @@ public class UnitTests extends BaseEmbeddedKafkaTest {
         ingestDocEndpoint.expectedMessageCount(1);
         context.start();
         ingestDocEndpoint.assertIsSatisfied();
-        context.stop();
     }
 
     @Test
@@ -139,6 +136,5 @@ public class UnitTests extends BaseEmbeddedKafkaTest {
         purgeDocEndpoint.expectedMessageCount(1);
         context.start();
         purgeDocEndpoint.assertIsSatisfied();
-        context.stop();
     }
 }
