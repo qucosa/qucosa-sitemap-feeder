@@ -42,21 +42,21 @@ public class ActiveMqRoute extends RouteBuilder {
                 .routeId(ACTIVEMQ_ROUTE)
                 // XML-to-JSON-mapping of relevant information
                 .process(new AMQMessageProcessor())
-                .to("kafka:sitemap_feeder?groupId=modifysitemap");
+                .to("kafka:sitemap_feeder");
 
         // route to update sitemap via pid's (post qucosa-ID's (qucosa:12345) to kafka topic "pidupdate")
         from("kafka:pidupdate?groupId=bulkinsert")
                 .routeId(KAFKA_BULK_INSERT_ROUTE)
                 // set/get method/tenant/pid/encodedpid
                 .process(new SetupJsonForBulkInsert())
-                .to("kafka:sitemap_feeder?groupId=modifysitemap");
+                .to("kafka:sitemap_feeder");
 
         // route to update sitemap via pid's (post qucosa-ID's (qucosa:12345) to kafka topic "pidupdate")
         from("kafka:piddelete?groupId=bulkdelete")
                 .routeId(KAFKA_BULK_DELETE_ROUTE)
                 // set/get method/tenant/pid/encodedpid
                 .process(new SetupJsonForBulkDelete())
-                .to("kafka:sitemap_feeder?groupId=modifysitemap");
+                .to("kafka:sitemap_feeder");
 
         from("kafka:sitemap_feeder?groupId=modifysitemap")
                 .routeId(SITEMAP_FEEDER_ROUTE)
