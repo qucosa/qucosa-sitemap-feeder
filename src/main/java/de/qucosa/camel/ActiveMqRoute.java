@@ -88,7 +88,7 @@ public class ActiveMqRoute extends RouteBuilder {
 
         from("direct:objectinfo")
                 .setProperty("encodedpid", jsonpath("$.encodedpid"))
-                .recipientList(simple("http4://{{fedora.host}}:{{fedora.port}}/fedora/objects/${exchangeProperty.encodedpid}?format=xml"));
+                .recipientList(simple("http4://{{fedora.service.url}}/fedora/objects/${exchangeProperty.encodedpid}?format=xml"));
 
         // Sitemap update
         from("direct:sitemap_create_urlset")
@@ -101,7 +101,7 @@ public class ActiveMqRoute extends RouteBuilder {
                 .throttle(10)
                 // throwExceptionOnFailure set to false to disable camel from throwing HttpOperationFailedException
                 // on response-codes 300+
-                .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets?throwExceptionOnFailure=false"));
+                .recipientList(simple("http4://{{sitemap.service.url}}/urlsets?throwExceptionOnFailure=false"));
 
         from("direct:sitemap_create_url")
                 .routeId("createUrlRoute")
@@ -114,13 +114,13 @@ public class ActiveMqRoute extends RouteBuilder {
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .setHeader("pid", exchangeProperty("pid"))
                 .throttle(10)
-                .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}"));
+                .recipientList(simple("http4://{{sitemap.service.url}}/urlsets/${exchangeProperty.tenant}"));
 
         from("direct:sitemap_delete_urlset")
                 .routeId("deleteUrlsetRoute")
                 .setProperty("tenant", jsonpath("$.tenant_urlset"))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
-                .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false"));
+                .recipientList(simple("http4://{{sitemap.service.url}}/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false"));
 
         from("direct:sitemap_delete_url")
                 .routeId("deleteUrlRoute")
@@ -129,7 +129,7 @@ public class ActiveMqRoute extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-                .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}/deleteurl?throwExceptionOnFailure=false"));
+                .recipientList(simple("http4://{{sitemap.service.url}}/urlsets/${exchangeProperty.tenant}/deleteurl?throwExceptionOnFailure=false"));
 
         from("direct:sitemap_modify_url_lastmod")
                 .routeId("modifyUrlRoute")
@@ -138,6 +138,6 @@ public class ActiveMqRoute extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.PUT))
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-                .recipientList(simple("http4://{{sitemap.host}}:{{sitemap.port}}/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false"));
+                .recipientList(simple("http4://{{sitemap.service.url}}/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false"));
     }
 }
