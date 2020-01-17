@@ -24,7 +24,7 @@ import static de.qucosa.camel.utils.RouteIds.KAFKA_BULK_DELETE_ROUTE;
 import static de.qucosa.camel.utils.RouteIds.KAFKA_BULK_INSERT_ROUTE;
 import static de.qucosa.camel.utils.RouteIds.SITEMAP_FEEDER_ROUTE;
 @Component
-public class ActiveMqRoute extends RouteBuilder {
+public class SitemapFeederRoutes extends RouteBuilder {
     @Value("#{${tenantShort.map}}")
     private Map<String, String> tenantShortMap;
 
