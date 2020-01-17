@@ -13,7 +13,7 @@ public class CamelApplication {
             main.setPropertyPlaceholderLocations("classpath:application-dev.properties");
         }
 
-        main.addRouteBuilder(new ActiveMqRoute());
+        main.addRouteBuilder(new SitemapFeederRoutes());
         main.run();
     }
 }
