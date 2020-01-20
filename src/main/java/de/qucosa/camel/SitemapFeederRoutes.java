@@ -1,10 +1,12 @@
 package de.qucosa.camel;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import de.qucosa.camel.camelprocessors.AMQMessageProcessor;
 import de.qucosa.camel.camelprocessors.SetupJsonForBulkDelete;
 import de.qucosa.camel.camelprocessors.SetupJsonForBulkInsert;
 import de.qucosa.camel.camelprocessors.UrlFormatProcessor;
 import de.qucosa.camel.camelprocessors.UrlsetFormatProcessor;
+import de.qucosa.camel.model.Tenant;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.http4.HttpMethods;
@@ -12,6 +14,8 @@ import org.apache.camel.component.kafka.KafkaComponent;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import static de.qucosa.camel.utils.RouteIds.ACTIVEMQ_ROUTE;
@@ -31,6 +35,16 @@ public class SitemapFeederRoutes extends RouteBuilder {
     @Value("#{${tenantLong.map}}")
     private Map<String, String> tenantLongMap;
 
+    @Value("${conf.path}")
+    private String confPath;
+
+    private List<Tenant> tenants() throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<Tenant> tenants = objectMapper.readValue(getClass().getResourceAsStream(confPath + "tenant.json"),
+                objectMapper.getTypeFactory().constructCollectionType(List.class, Tenant.class));
+        return tenants;
+    }
+
     @Override
     public void configure() {
         KafkaComponent kafka = new KafkaComponent();
@@ -41,6 +55,10 @@ public class SitemapFeederRoutes extends RouteBuilder {
         from("activemq:topic:fedora.apim.update")
                 .routeId(ACTIVEMQ_ROUTE)
                 // XML-to-JSON-mapping of relevant information
+                .process(exchange -> {
+                    List<Tenant> tenants = tenants();
+                    tenants.size();
+                })
                 .process(new AMQMessageProcessor())
                 .to("kafka:sitemap_feeder");
 
@@ -64,8 +82,8 @@ public class SitemapFeederRoutes extends RouteBuilder {
                 .enrich("direct:objectinfo", new AppendFedoraObjectInfo(tenantShortMap, tenantLongMap))
                 .id(APPEND_FEDORA_OBJ_INFO)
                 .choice()
-                    .when().jsonpath("$.[?(@.objectState == 'I')]").to("mock:inactive_doc")
-                    .when().jsonpath("$.[?(@.objectState == 'D')]").to("mock:deleted_doc")
+//                    .when().jsonpath("$.[?(@.objectState == 'I')]").to("mock:inactive_doc")
+//                    .when().jsonpath("$.[?(@.objectState == 'D')]").to("mock:deleted_doc")
                     .when().jsonpath("$.[?(@.objectState == 'A')]")
                         .choice()
                             .when().jsonpath("$.[?(@.method == 'addDatastream')]")
@@ -84,8 +102,11 @@ public class SitemapFeederRoutes extends RouteBuilder {
                                 .to("direct:sitemap_modify_url_lastmod")
                                 .id(HTTP_MODIFY_OBJECT_ID)
                         .endChoice()
+                    .otherwise()
+                        .to("mock:not_active_doc")
                 .endChoice();
 
+        // This is object by fedora 3 only.
         from("direct:objectinfo")
                 .setProperty("encodedpid", jsonpath("$.encodedpid"))
                 .recipientList(simple("http4://{{fedora.service.url}}/fedora/objects/${exchangeProperty.encodedpid}?format=xml"));
