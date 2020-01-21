@@ -15,8 +15,8 @@ public class Tenant implements Serializable {
     @JsonProperty("small")
     private String small;
 
-    @JsonProperty("large")
-    private String large;
+    @JsonProperty("host")
+    private String host;
 
     public String getName() {
         return name;
@@ -34,11 +34,11 @@ public class Tenant implements Serializable {
         this.small = small;
     }
 
-    public String getLarge() {
-        return large;
+    public String getHost() {
+        return host;
     }
 
-    public void setLarge(String large) {
-        this.large = large;
+    public void setHost(String host) {
+        this.host = host;
     }
 }
