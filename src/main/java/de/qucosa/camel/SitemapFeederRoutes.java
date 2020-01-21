@@ -44,33 +44,38 @@ public class SitemapFeederRoutes extends RouteBuilder {
                 .process(new SetupJsonForBulkDelete())
                 .to("kafka:sitemap_feeder");
 
-        from("kafka:sitemap_feeder?groupId=modifysitemap")
+        from("kafka:service_events?groupId=sitemap&consumersCount=1&breakOnFirstError=true&autoOffsetReset=earliest")
                 .routeId(SITEMAP_FEEDER_ROUTE)
-                // appends tenant (urlset-name) and objectState to JSON-body
-                .enrich("direct:objectinfo", new AppendFedoraObjectInfo(tenants()))
-                .id(APPEND_FEDORA_OBJ_INFO)
-                .choice()
-                    .when().jsonpath("$.[?(@.objectState == 'A')]")
-                        .choice()
-                            .when().jsonpath("$.[?(@.method == 'addDatastream')]")
-                                .to("direct:sitemap_modify_url_lastmod")
-                                .id(HTTP_ADD_DATASTREAM_ID)
-                            .when().jsonpath("$.[?(@.method == 'ingest')]")
-                                .multicast()
-                                .parallelProcessing(false)
-                                .to("direct:sitemap_create_urlset", "direct:sitemap_create_url")
-                                .id(HTTP_INGEST_ID)
-                                .endChoice() // needed for multicast
-                            .when().jsonpath("$.[?(@.method == 'purgeObject')]")
-                                .to("direct:sitemap_delete_url")
-                                .id(HTTP_PURGE_OBJECT_ID)
-                            .when().jsonpath("$.[?(@.method == 'modifyObject')]")
-                                .to("direct:sitemap_modify_url_lastmod")
-                                .id(HTTP_MODIFY_OBJECT_ID)
-                        .endChoice()
-                    .otherwise()
-                        .to("mock:not_active_doc")
-                .endChoice();
+                .enrich("direct:objectinfo", new AppendFedoraObjectInfo(tenants())).id(APPEND_FEDORA_OBJ_INFO)
+                .to("direct:sitemap_create_url");
+
+//        from("kafka:sitemap_feeder?groupId=modifysitemap")
+//                .routeId(SITEMAP_FEEDER_ROUTE)
+//                // appends tenant (urlset-name) and objectState to JSON-body
+//                .enrich("direct:objectinfo", new AppendFedoraObjectInfo(tenants()))
+//                .id(APPEND_FEDORA_OBJ_INFO)
+//                .choice()
+//                    .when().jsonpath("$.[?(@.objectState == 'A')]")
+//                        .choice()
+//                            .when().jsonpath("$.[?(@.method == 'addDatastream')]")
+//                                .to("direct:sitemap_modify_url_lastmod")
+//                                .id(HTTP_ADD_DATASTREAM_ID)
+//                            .when().jsonpath("$.[?(@.method == 'ingest')]")
+//                                .multicast()
+//                                .parallelProcessing(false)
+//                                .to("direct:sitemap_create_urlset", "direct:sitemap_create_url")
+//                                .id(HTTP_INGEST_ID)
+//                                .endChoice() // needed for multicast
+//                            .when().jsonpath("$.[?(@.method == 'purgeObject')]")
+//                                .to("direct:sitemap_delete_url")
+//                                .id(HTTP_PURGE_OBJECT_ID)
+//                            .when().jsonpath("$.[?(@.method == 'modifyObject')]")
+//                                .to("direct:sitemap_modify_url_lastmod")
+//                                .id(HTTP_MODIFY_OBJECT_ID)
+//                        .endChoice()
+//                    .otherwise()
+//                        .to("mock:not_active_doc")
+//                .endChoice();
 
         // This is object by fedora 3 only.
         from("direct:objectinfo")
@@ -78,17 +83,17 @@ public class SitemapFeederRoutes extends RouteBuilder {
                 .recipientList(simple("http4://{{fedora.service.url}}/fedora/objects/${exchangeProperty.encodedpid}?format=xml"));
 
         // Sitemap update
-        from("direct:sitemap_create_urlset")
-                .routeId("createUrlsetRoute")
-                // set json-format for urlset's with tenantname (urlset-uri)
-                .process(new UrlsetFormatProcessor())
-                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
-                .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
-                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-                .throttle(10)
-                // throwExceptionOnFailure set to false to disable camel from throwing HttpOperationFailedException
-                // on response-codes 300+
-                .recipientList(simple("http4://{{sitemap.service.url}}/urlsets?throwExceptionOnFailure=false"));
+//        from("direct:sitemap_create_urlset")
+//                .routeId("createUrlsetRoute")
+//                // set json-format for urlset's with tenantname (urlset-uri)
+//                .process(new UrlsetFormatProcessor())
+//                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
+//                .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
+//                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+//                .throttle(10)
+//                // throwExceptionOnFailure set to false to disable camel from throwing HttpOperationFailedException
+//                // on response-codes 300+
+//                .recipientList(simple("http4://{{sitemap.service.url}}/urlsets?throwExceptionOnFailure=false"));
 
         from("direct:sitemap_create_url")
                 .routeId("createUrlRoute")
