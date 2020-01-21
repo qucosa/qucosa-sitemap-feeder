@@ -20,6 +20,7 @@ package de.qucosa.camel;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import de.qucosa.camel.model.Tenant;
 import org.apache.camel.Exchange;
 import org.apache.camel.json.simple.JsonObject;
 import org.apache.camel.processor.aggregate.AggregationStrategy;
@@ -32,16 +33,14 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
-import java.util.Map;
+import java.util.List;
 
 public class AppendFedoraObjectInfo implements AggregationStrategy {
     private final XPath xPath =  XPathFactory.newInstance().newXPath();
-    private final Map<String, String> tenantsShort;
-    private final Map<String, String> tenantsLong;
+    List<Tenant> tenants;
 
-    public AppendFedoraObjectInfo(Map<String, String> tenantShortMap, Map<String, String> tenantLongMap) {
-        this.tenantsShort = tenantShortMap;
-        this.tenantsLong = tenantLongMap;
+    public AppendFedoraObjectInfo(List<Tenant> tenants) {
+        this.tenants = tenants;
         DocumentBuilderFactory documentFactory = DocumentBuilderFactory.newInstance();
         documentFactory.setNamespaceAware(true);
         SimpleNamespaceContext namespaceContext = new SimpleNamespaceContext();
@@ -56,6 +55,7 @@ public class AppendFedoraObjectInfo implements AggregationStrategy {
 
         String fedoraTenantName = null;
         String fedoraObjectState = null;
+
         try {
             fedoraTenantName = xPath.compile("//obj:objectProfile/obj:objOwnerId/text()")
                     .evaluate(fedoraObjectInformationResponse, XPathConstants.STRING).toString();
@@ -64,37 +64,42 @@ public class AppendFedoraObjectInfo implements AggregationStrategy {
         } catch (XPathExpressionException e) {
             System.out.println("error getting tenant/objOwnerId for object.");
         }
-        // map tenant-name to DNS-Entries.
-        String tenantShort = null;
-        if (tenantsShort.containsKey(fedoraTenantName)) {
-            tenantShort = tenantsShort.get(fedoraTenantName);
+
+        Tenant tenant = null;
+
+        for (Tenant obj : tenants) {
+
+            if (obj.getName().equals(fedoraTenantName)) {
+                tenant = obj;
+            }
         }
-        String tenantLong = null;
-        if (tenantsShort.containsKey(fedoraTenantName)) {
-            tenantLong = tenantsLong.get(fedoraTenantName);
+
+        if (tenant == null) {
+            throw new RuntimeException("Cannot found fedora tenant " + fedoraTenantName + " in tenatns config.");
+        }
+
+        if (tenant.getSmall() == null || tenant.getSmall().isEmpty() ||
+            tenant.getLarge() == null || tenant.getLarge().isEmpty()) {
+            throw new RuntimeException("Small or large name definition for tenant " + fedoraTenantName + " failed.");
+        }
+
+        if (fedoraObjectState == null) {
+            throw new RuntimeException("Fedora Object state missing.");
         }
 
         // append tenant (urlset-name)
         ObjectMapper mapper = new ObjectMapper();
         try {
             JsonNode jsonInfo = mapper.readTree(originalJsonBody);
-
             ObjectNode node = (ObjectNode) jsonInfo;
 
-            if (tenantShort == null || tenantLong == null) {
-                throw new IOException("Fedora Tenant '" + fedoraTenantName
-                        + "' can't be found in tenant-maps (application.properties)");
-            }
-            if (fedoraObjectState == null) {
-                throw new IOException("Fedora Object state missing.");
-            }
-            node.put("tenant_urlset", tenantShort);
-            node.put("tenant_url", tenantLong);
+            node.put("tenant_urlset", tenant.getSmall());
+            node.put("tenant_url", tenant.getLarge());
             node.put("objectState", fedoraObjectState);
 
             original.getIn().setBody(node.toString(), JsonObject.class);
         } catch (IOException e) {
-            System.out.println("problem reading json-info from exchange-body");
+            System.out.println("Problem reading json-info from exchange-body.");
         }
 
         return original;
