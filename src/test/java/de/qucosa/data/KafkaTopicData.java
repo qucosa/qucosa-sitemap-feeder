@@ -2,8 +2,10 @@ package de.qucosa.data;
 
 public class KafkaTopicData {
     public static final String JSON_DELETE_EVENT =
-            "{\"org.fcrepo.jms.ownerID\":\"tud\"," +
-            "{\"org.fcrepo.jms.objectState\":\"A\"," +
+            "{\"de.qucosa.event.version\":\"1.0\"," +
+            "{\"de.qucosa.event.sourceID\":\"urn:fcrepo3:sdvcmr-app03\"," +
+            "{\"de.qucosa.event.owner\":\"tud\"," +
+            "{\"de.qucosa.event.state\":\"A\"," +
             "{\"org.fcrepo.jms.user\":\"sword\"," +
             "\"org.fcrepo.jms.eventID\":\"urn:uuid:0b56626a-7b38-429a-86d6-6ebebe310287\"," +
             "\"org.fcrepo.jms.identifier\":\"qucosa:12164\"," +
@@ -14,8 +16,10 @@ public class KafkaTopicData {
             "\"org.fcrepo.jms.userAgent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36\"}";
 
     public static final String JSON_CREATE_EVENT =
-            "{\"org.fcrepo.jms.ownerID\":\"tud\"," +
-            "{\"org.fcrepo.jms.objectState\":\"A\"," +
+            "{\"de.qucosa.event.version\":\"1.0\"," +
+            "{\"de.qucosa.event.sourceID\":\"urn:fcrepo3:sdvcmr-app03\"," +
+            "{\"de.qucosa.event.owner\":\"tud\"," +
+            "{\"de.qucosa.event.state\":\"A\"," +
             "{\"org.fcrepo.jms.user\":\"sword\"," +
             "\"org.fcrepo.jms.eventID\":\"urn:uuid:0b56626a-7b38-429a-86d6-6ebebe310287\"," +
             "\"org.fcrepo.jms.identifier\":\"qucosa:12164\"," +
@@ -26,8 +30,10 @@ public class KafkaTopicData {
             "\"org.fcrepo.jms.userAgent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36\"}";
 
     public static final String JSON_UPDATE_EVENT =
-            "{\"org.fcrepo.jms.ownerID\":\"tud\"," +
-            "{\"org.fcrepo.jms.objectState\":\"A\"," +
+            "{\"de.qucosa.event.version\":\"1.0\"," +
+            "{\"de.qucosa.event.sourceID\":\"urn:fcrepo3:sdvcmr-app03\"," +
+            "{\"de.qucosa.event.owner\":\"tud\"," +
+            "{\"de.qucosa.event.state\":\"A\"," +
             "{\"org.fcrepo.jms.user\":\"sword\"," +
             "\"org.fcrepo.jms.eventID\":\"urn:uuid:0b56626a-7b38-429a-86d6-6ebebe310287\"," +
             "\"org.fcrepo.jms.identifier\":\"qucosa:12164\"," +
