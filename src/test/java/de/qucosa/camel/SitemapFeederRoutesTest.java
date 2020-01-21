@@ -1,11 +1,17 @@
 package de.qucosa.camel;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import de.qucosa.data.KafkaTopicData;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.AdviceWithRouteBuilder;
 import org.apache.camel.component.kafka.KafkaComponent;
+import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.component.properties.PropertiesComponent;
 import org.apache.camel.impl.DefaultCamelContext;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -17,7 +23,8 @@ import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import static de.qucosa.camel.utils.RouteIds.ACTIVEMQ_ROUTE;
+import java.util.Properties;
+
 import static de.qucosa.camel.utils.RouteIds.APPEND_FEDORA_OBJ_INFO;
 import static de.qucosa.camel.utils.RouteIds.SITEMAP_FEEDER_ROUTE;
 
@@ -40,8 +47,9 @@ public class SitemapFeederRoutesTest {
     @BeforeAll
     public void setUp() throws Exception {
         kafkaCon.start();
-        kafkaCon.execInContainer("/bin/sh", "-c", "kafka-topics --zookeeper localhost:2181 --partitions=1 --replication-factor=1 --create --topic sitemap_feeder");
         kafkaCon.execInContainer("/bin/sh", "-c", "kafka-topics --zookeeper localhost:2181 --partitions=1 --replication-factor=1 --create --topic pidupdate");
+        kafkaCon.execInContainer("/bin/sh", "-c", "kafka-topics --zookeeper localhost:2181 --partitions=1 --replication-factor=1 --create --topic piddelete");
+        kafkaCon.execInContainer("/bin/sh", "-c", "kafka-topics --zookeeper localhost:2181 --partitions=1 --replication-factor=1 --create --topic service_events");
 
         PropertiesComponent pc = (PropertiesComponent) camelContext.getComponent("properties");
         pc.setLocation("classpath:application-test.properties");
@@ -50,32 +58,50 @@ public class SitemapFeederRoutesTest {
         KafkaComponent kafkaComponent = (KafkaComponent) camelContext.getComponent("kafka");
         kafkaComponent.setBrokers(kafkaCon.getBootstrapServers());
 
-        camelContext.getRouteDefinition(ACTIVEMQ_ROUTE).adviceWith(camelContext, new AdviceWithRouteBuilder() {
+        camelContext.getRouteDefinition(SITEMAP_FEEDER_ROUTE).adviceWith(camelContext, new AdviceWithRouteBuilder() {
             @Override
             public void configure() throws Exception {
-                replaceFromWith("file://" + AMQ_FILE_PATH + "?fileName=ingest.xml&noop=true");
-                weaveByToUri("kafka:sitemap_feeder").after().to("mock:ingest");
+                weaveById(APPEND_FEDORA_OBJ_INFO)
+                        .replace()
+                        .process(exchange -> {
+                            exchange.getIn().setBody("Hallo Welt");
+                        });
+
+                weaveByToUri("direct:sitemap_create_url").replace().to("mock:ingest");
             }
         });
-
-//        camelContext.getRouteDefinition(SITEMAP_FEEDER_ROUTE).adviceWith(camelContext, new AdviceWithRouteBuilder() {
-//            @Override
-//            public void configure() throws Exception {
-//                weaveById(APPEND_FEDORA_OBJ_INFO)
-//                        .replace()
-//                        .to("");
-//            }
-//        });
     }
 
     @Test
-    public void inittest() throws Exception {
+    @DisplayName("Ingest the sitemap url.")
+    public void ingest() throws Exception {
+        KafkaProducer<String, String> kafkaProducer = kafkaProducer();
+        kafkaProducer.send(producerRecord());
+        kafkaProducer.close();
+
         MockEndpoint ingest = camelContext.getEndpoint("mock:ingest", MockEndpoint.class);
-        camelContext.start();
         ingest.expectedMessageCount(1);
-        ProducerTemplate template = camelContext.createProducerTemplate();
-        template.sendBody("kafka:sitemap_feeder", getClass().getResourceAsStream("jms/ingest.xml"));
+        camelContext.start();
         ingest.assertIsSatisfied();
+    }
+
+    private KafkaProducer<String, String> kafkaProducer() {
+        Properties prodProps = new Properties();
+        prodProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaCon.getBootstrapServers());
+        prodProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaConstants.KAFKA_DEFAULT_SERIALIZER);
+        prodProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaConstants.KAFKA_DEFAULT_SERIALIZER);
+        prodProps.put(ProducerConfig.PARTITIONER_CLASS_CONFIG, KafkaConstants.KAFKA_DEFAULT_PARTITIONER);
+        prodProps.put(ProducerConfig.ACKS_CONFIG, "1");
+        return new KafkaProducer<String, String>(prodProps);
+    }
+
+    @SuppressWarnings("unchecked")
+    private ProducerRecord<String, String> producerRecord() throws JsonProcessingException {
+        return (ProducerRecord<String, String>) new ProducerRecord(
+                "service_events",
+                0,
+                "qucosa:12164",
+                KafkaTopicData.JSON_CREATE_EVENT);
     }
 
     @AfterAll
