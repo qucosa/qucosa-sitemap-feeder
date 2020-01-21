@@ -14,7 +14,6 @@ import org.apache.camel.component.kafka.KafkaComponent;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -35,16 +34,6 @@ public class SitemapFeederRoutes extends RouteBuilder {
     @Value("#{${tenantLong.map}}")
     private Map<String, String> tenantLongMap;
 
-    @Value("${conf.path}")
-    private String confPath;
-
-    private List<Tenant> tenants() throws IOException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        List<Tenant> tenants = objectMapper.readValue(getClass().getResourceAsStream(confPath + "tenant.json"),
-                objectMapper.getTypeFactory().constructCollectionType(List.class, Tenant.class));
-        return tenants;
-    }
-
     @Override
     public void configure() {
         KafkaComponent kafka = new KafkaComponent();
@@ -55,10 +44,6 @@ public class SitemapFeederRoutes extends RouteBuilder {
         from("activemq:topic:fedora.apim.update")
                 .routeId(ACTIVEMQ_ROUTE)
                 // XML-to-JSON-mapping of relevant information
-                .process(exchange -> {
-                    List<Tenant> tenants = tenants();
-                    tenants.size();
-                })
                 .process(new AMQMessageProcessor())
                 .to("kafka:sitemap_feeder");
 
@@ -82,8 +67,6 @@ public class SitemapFeederRoutes extends RouteBuilder {
                 .enrich("direct:objectinfo", new AppendFedoraObjectInfo(tenantShortMap, tenantLongMap))
                 .id(APPEND_FEDORA_OBJ_INFO)
                 .choice()
-//                    .when().jsonpath("$.[?(@.objectState == 'I')]").to("mock:inactive_doc")
-//                    .when().jsonpath("$.[?(@.objectState == 'D')]").to("mock:deleted_doc")
                     .when().jsonpath("$.[?(@.objectState == 'A')]")
                         .choice()
                             .when().jsonpath("$.[?(@.method == 'addDatastream')]")
@@ -160,5 +143,12 @@ public class SitemapFeederRoutes extends RouteBuilder {
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .recipientList(simple("http4://{{sitemap.service.url}}/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false"));
+    }
+
+    private List<Tenant> tenants() throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<Tenant> tenants = objectMapper.readValue(getClass().getResourceAsStream(getContext().resolvePropertyPlaceholders("{{conf.path}}") + "tenant.json"),
+                objectMapper.getTypeFactory().constructCollectionType(List.class, Tenant.class));
+        return tenants;
     }
 }
