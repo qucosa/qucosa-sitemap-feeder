@@ -10,7 +10,6 @@ import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.component.kafka.KafkaComponent;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 
@@ -22,7 +21,7 @@ import static de.qucosa.camel.utils.RouteIds.HTTP_PURGE_OBJECT_ID;
 import static de.qucosa.camel.utils.RouteIds.KAFKA_BULK_DELETE_ROUTE;
 import static de.qucosa.camel.utils.RouteIds.KAFKA_BULK_INSERT_ROUTE;
 import static de.qucosa.camel.utils.RouteIds.SITEMAP_FEEDER_ROUTE;
-@Component
+
 public class SitemapFeederRoutes extends RouteBuilder {
 
     @Override
