@@ -11,11 +11,9 @@ import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.component.kafka.KafkaComponent;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Map;
 
 import static de.qucosa.camel.utils.RouteIds.ACTIVEMQ_ROUTE;
 import static de.qucosa.camel.utils.RouteIds.APPEND_FEDORA_OBJ_INFO;
@@ -28,14 +26,9 @@ import static de.qucosa.camel.utils.RouteIds.KAFKA_BULK_INSERT_ROUTE;
 import static de.qucosa.camel.utils.RouteIds.SITEMAP_FEEDER_ROUTE;
 @Component
 public class SitemapFeederRoutes extends RouteBuilder {
-    @Value("#{${tenantShort.map}}")
-    private Map<String, String> tenantShortMap;
-
-    @Value("#{${tenantLong.map}}")
-    private Map<String, String> tenantLongMap;
 
     @Override
-    public void configure() {
+    public void configure() throws Exception {
         KafkaComponent kafka = new KafkaComponent();
         kafka.setBrokers("{{kafka.broker.host}}");
         getContext().addComponent("kafka", kafka);
@@ -64,7 +57,7 @@ public class SitemapFeederRoutes extends RouteBuilder {
         from("kafka:sitemap_feeder?groupId=modifysitemap")
                 .routeId(SITEMAP_FEEDER_ROUTE)
                 // appends tenant (urlset-name) and objectState to JSON-body
-                .enrich("direct:objectinfo", new AppendFedoraObjectInfo(tenantShortMap, tenantLongMap))
+                .enrich("direct:objectinfo", new AppendFedoraObjectInfo(tenants()))
                 .id(APPEND_FEDORA_OBJ_INFO)
                 .choice()
                     .when().jsonpath("$.[?(@.objectState == 'A')]")
