@@ -21,37 +21,32 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import de.qucosa.camel.model.Tenant;
+import de.qucosa.camel.utils.DocumentXmlUtils;
 import org.apache.camel.Exchange;
 import org.apache.camel.json.simple.JsonObject;
 import org.apache.camel.processor.aggregate.AggregationStrategy;
-import org.springframework.util.xml.SimpleNamespaceContext;
 import org.w3c.dom.Document;
 
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 public class AppendFedoraObjectInfo implements AggregationStrategy {
-    private final XPath xPath =  XPathFactory.newInstance().newXPath();
-    List<Tenant> tenants;
+
+    private List<Tenant> tenants;
 
     public AppendFedoraObjectInfo(List<Tenant> tenants) {
         this.tenants = tenants;
-        DocumentBuilderFactory documentFactory = DocumentBuilderFactory.newInstance();
-        documentFactory.setNamespaceAware(true);
-        SimpleNamespaceContext namespaceContext = new SimpleNamespaceContext();
-        namespaceContext.bindNamespaceUri("obj", "http://www.fedora.info/definitions/1/0/access/");
-        xPath.setNamespaceContext(namespaceContext);
     }
 
     @Override
     public Exchange aggregate(Exchange original, Exchange resource) {
         String originalJsonBody = original.getIn().getBody(String.class);
         Document fedoraObjectInformationResponse = resource.getIn().getBody(Document.class);
+        XPath xPath = DocumentXmlUtils.xpath(Collections.singletonMap("obj", "http://www.fedora.info/definitions/1/0/access/"));
 
         String fedoraTenantName = null;
         String fedoraObjectState = null;
@@ -79,7 +74,7 @@ public class AppendFedoraObjectInfo implements AggregationStrategy {
         }
 
         if (tenant.getSmall() == null || tenant.getSmall().isEmpty() ||
-            tenant.getLarge() == null || tenant.getLarge().isEmpty()) {
+            tenant.getHost() == null || tenant.getHost().isEmpty()) {
             throw new RuntimeException("Small or large name definition for tenant " + fedoraTenantName + " failed.");
         }
 
@@ -94,7 +89,7 @@ public class AppendFedoraObjectInfo implements AggregationStrategy {
             ObjectNode node = (ObjectNode) jsonInfo;
 
             node.put("tenant_urlset", tenant.getSmall());
-            node.put("tenant_url", tenant.getLarge());
+            node.put("tenant_url", tenant.getHost());
             node.put("objectState", fedoraObjectState);
 
             original.getIn().setBody(node.toString(), JsonObject.class);
