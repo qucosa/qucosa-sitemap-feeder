@@ -5,7 +5,6 @@ public class KafkaTopicData {
             "{\"de.qucosa.event.version\":\"1.0\"," +
             "{\"de.qucosa.event.sourceID\":\"urn:fcrepo3:sdvcmr-app03\"," +
             "{\"de.qucosa.event.owner\":\"tud\"," +
-            "{\"de.qucosa.event.state\":\"A\"," +
             "{\"org.fcrepo.jms.user\":\"sword\"," +
             "\"org.fcrepo.jms.eventID\":\"urn:uuid:0b56626a-7b38-429a-86d6-6ebebe310287\"," +
             "\"org.fcrepo.jms.identifier\":\"qucosa:12164\"," +
@@ -19,7 +18,6 @@ public class KafkaTopicData {
             "{\"de.qucosa.event.version\":\"1.0\"," +
             "{\"de.qucosa.event.sourceID\":\"urn:fcrepo3:sdvcmr-app03\"," +
             "{\"de.qucosa.event.owner\":\"tud\"," +
-            "{\"de.qucosa.event.state\":\"A\"," +
             "{\"org.fcrepo.jms.user\":\"sword\"," +
             "\"org.fcrepo.jms.eventID\":\"urn:uuid:0b56626a-7b38-429a-86d6-6ebebe310287\"," +
             "\"org.fcrepo.jms.identifier\":\"qucosa:12164\"," +
@@ -33,7 +31,6 @@ public class KafkaTopicData {
             "{\"de.qucosa.event.version\":\"1.0\"," +
             "{\"de.qucosa.event.sourceID\":\"urn:fcrepo3:sdvcmr-app03\"," +
             "{\"de.qucosa.event.owner\":\"tud\"," +
-            "{\"de.qucosa.event.state\":\"A\"," +
             "{\"org.fcrepo.jms.user\":\"sword\"," +
             "\"org.fcrepo.jms.eventID\":\"urn:uuid:0b56626a-7b38-429a-86d6-6ebebe310287\"," +
             "\"org.fcrepo.jms.identifier\":\"qucosa:12164\"," +
