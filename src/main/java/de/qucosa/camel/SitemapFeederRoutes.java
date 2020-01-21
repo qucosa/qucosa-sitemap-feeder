@@ -1,7 +1,6 @@
 package de.qucosa.camel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.qucosa.camel.camelprocessors.AMQMessageProcessor;
 import de.qucosa.camel.camelprocessors.SetupJsonForBulkDelete;
 import de.qucosa.camel.camelprocessors.SetupJsonForBulkInsert;
 import de.qucosa.camel.camelprocessors.UrlFormatProcessor;
@@ -15,7 +14,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-import static de.qucosa.camel.utils.RouteIds.ACTIVEMQ_ROUTE;
 import static de.qucosa.camel.utils.RouteIds.APPEND_FEDORA_OBJ_INFO;
 import static de.qucosa.camel.utils.RouteIds.HTTP_ADD_DATASTREAM_ID;
 import static de.qucosa.camel.utils.RouteIds.HTTP_INGEST_ID;
@@ -32,13 +30,6 @@ public class SitemapFeederRoutes extends RouteBuilder {
         KafkaComponent kafka = new KafkaComponent();
         kafka.setBrokers("{{kafka.broker.host}}");
         getContext().addComponent("kafka", kafka);
-
-        // Transport updated PIDs to Kafka topic
-        from("activemq:topic:fedora.apim.update")
-                .routeId(ACTIVEMQ_ROUTE)
-                // XML-to-JSON-mapping of relevant information
-                .process(new AMQMessageProcessor())
-                .to("kafka:sitemap_feeder");
 
         // route to update sitemap via pid's (post qucosa-ID's (qucosa:12345) to kafka topic "pidupdate")
         from("kafka:pidupdate?groupId=bulkinsert")
