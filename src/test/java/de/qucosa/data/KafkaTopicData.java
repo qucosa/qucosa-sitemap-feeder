@@ -3,9 +3,11 @@ package de.qucosa.data;
 public class KafkaTopicData {
     public static final String JSON_DELETE_EVENT =
             "{\"de.qucosa.event.version\":\"1.0\"," +
-            "{\"de.qucosa.event.sourceID\":\"urn:fcrepo3:sdvcmr-app03\"," +
-            "{\"de.qucosa.event.owner\":\"tud\"," +
-            "{\"org.fcrepo.jms.user\":\"sword\"," +
+            "\"de.qucosa.event.sourceID\":\"urn:fcrepo3:sdvcmr-app03\"," +
+            "\"de.qucosa.event.transactionID\":\"\"," +
+            "\"de.qucosa.event.expires\":0," +
+            "\"de.qucosa.event.owner\":\"tud\"," +
+            "\"org.fcrepo.jms.user\":\"sword\"," +
             "\"org.fcrepo.jms.eventID\":\"urn:uuid:0b56626a-7b38-429a-86d6-6ebebe310287\"," +
             "\"org.fcrepo.jms.identifier\":\"qucosa:12164\"," +
             "\"org.fcrepo.jms.timestamp\":1544089905392," +
@@ -16,9 +18,11 @@ public class KafkaTopicData {
 
     public static final String JSON_CREATE_EVENT =
             "{\"de.qucosa.event.version\":\"1.0\"," +
-            "{\"de.qucosa.event.sourceID\":\"urn:fcrepo3:sdvcmr-app03\"," +
-            "{\"de.qucosa.event.owner\":\"tud\"," +
-            "{\"org.fcrepo.jms.user\":\"sword\"," +
+            "\"de.qucosa.event.sourceID\":\"urn:fcrepo3:sdvcmr-app03\"," +
+            "\"de.qucosa.event.transactionID\":\"\"," +
+            "\"de.qucosa.event.expires\":0," +
+            "\"de.qucosa.event.owner\":\"tud\"," +
+            "\"org.fcrepo.jms.user\":\"sword\"," +
             "\"org.fcrepo.jms.eventID\":\"urn:uuid:0b56626a-7b38-429a-86d6-6ebebe310287\"," +
             "\"org.fcrepo.jms.identifier\":\"qucosa:12164\"," +
             "\"org.fcrepo.jms.timestamp\":1544089905392," +
@@ -29,9 +33,11 @@ public class KafkaTopicData {
 
     public static final String JSON_UPDATE_EVENT =
             "{\"de.qucosa.event.version\":\"1.0\"," +
-            "{\"de.qucosa.event.sourceID\":\"urn:fcrepo3:sdvcmr-app03\"," +
-            "{\"de.qucosa.event.owner\":\"tud\"," +
-            "{\"org.fcrepo.jms.user\":\"sword\"," +
+            "\"de.qucosa.event.sourceID\":\"urn:fcrepo3:sdvcmr-app03\"," +
+            "\"de.qucosa.event.transactionID\":\"\"," +
+            "\"de.qucosa.event.expires\":0," +
+            "\"de.qucosa.event.owner\":\"tud\"," +
+            "\"org.fcrepo.jms.user\":\"sword\"," +
             "\"org.fcrepo.jms.eventID\":\"urn:uuid:0b56626a-7b38-429a-86d6-6ebebe310287\"," +
             "\"org.fcrepo.jms.identifier\":\"qucosa:12164\"," +
             "\"org.fcrepo.jms.timestamp\":1544089905392," +
