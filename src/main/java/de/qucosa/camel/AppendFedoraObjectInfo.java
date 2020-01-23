@@ -37,13 +37,16 @@ public class AppendFedoraObjectInfo implements AggregationStrategy {
 
     @Override
     public Exchange aggregate(Exchange original, Exchange resource) {
+        FedoraUpdateEvent event = original.getIn().getBody(FedoraUpdateEvent.class);
+
         UrlObjectBuilder urlObjectBuilder = new UrlObjectBuilder(
-                original.getIn().getBody(FedoraUpdateEvent.class),
+                event,
                 resource.getIn().getBody(Document.class),
                 tenants
         );
 
         original.setProperty("objectState", urlObjectBuilder.objectState());
+        original.setProperty("eventType", event.getEventType());
 
         try {
             original.getIn().setBody(urlObjectBuilder.sitemapUrlObject());
