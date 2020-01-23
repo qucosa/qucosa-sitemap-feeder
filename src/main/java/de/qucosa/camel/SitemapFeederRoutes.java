@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.qucosa.camel.camelprocessors.SetupJsonForBulkDelete;
 import de.qucosa.camel.camelprocessors.SetupJsonForBulkInsert;
 import de.qucosa.camel.camelprocessors.UrlFormatProcessor;
-import de.qucosa.camel.camelprocessors.UrlsetFormatProcessor;
 import de.qucosa.camel.model.Tenant;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
@@ -14,10 +13,6 @@ import org.apache.camel.component.kafka.KafkaComponent;
 import java.util.List;
 
 import static de.qucosa.camel.utils.RouteIds.APPEND_FEDORA_OBJ_INFO;
-import static de.qucosa.camel.utils.RouteIds.HTTP_ADD_DATASTREAM_ID;
-import static de.qucosa.camel.utils.RouteIds.HTTP_INGEST_ID;
-import static de.qucosa.camel.utils.RouteIds.HTTP_MODIFY_OBJECT_ID;
-import static de.qucosa.camel.utils.RouteIds.HTTP_PURGE_OBJECT_ID;
 import static de.qucosa.camel.utils.RouteIds.KAFKA_BULK_DELETE_ROUTE;
 import static de.qucosa.camel.utils.RouteIds.KAFKA_BULK_INSERT_ROUTE;
 import static de.qucosa.camel.utils.RouteIds.SITEMAP_FEEDER_ROUTE;
@@ -47,7 +42,13 @@ public class SitemapFeederRoutes extends RouteBuilder {
         from("kafka:service_events?groupId=sitemap&consumersCount=1&breakOnFirstError=true&autoOffsetReset=earliest")
                 .routeId(SITEMAP_FEEDER_ROUTE)
                 .enrich("direct:objectinfo", new AppendFedoraObjectInfo(tenants())).id(APPEND_FEDORA_OBJ_INFO)
-                .to("direct:sitemap_create_url");
+                .choice()
+                    .when(simple("${property.objectState} == 'A'"))
+                        .choice()
+                            .when(simple("${property.eventType} == 'create'"))
+                                .to("direct:sitemap_create_url")
+                    .otherwise()
+                        .to("mock:otherwise");
 
 //        from("kafka:sitemap_feeder?groupId=modifysitemap")
 //                .routeId(SITEMAP_FEEDER_ROUTE)
