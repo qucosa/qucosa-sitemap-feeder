@@ -17,9 +17,9 @@
 
 package de.qucosa.camel.camelprocessors;
 
-import de.qucosa.camel.utils.Utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import de.qucosa.camel.utils.DateTimeConverter;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.json.simple.JsonObject;
@@ -38,7 +38,7 @@ public class SetupJsonForBulkInsert implements Processor {
         objectInfoAsJson.put("pid", pid);
         objectInfoAsJson.put("encodedpid", encodedpid);
         objectInfoAsJson.put("method", "ingest");
-        objectInfoAsJson.put("modifiedDate", Utils.getCurrentW3cDatetime());
+        objectInfoAsJson.put("modifiedDate", DateTimeConverter.getCurrentW3cDatetime());
 
         exchange.getIn().setBody(objectInfoAsJson.toString(), JsonObject.class);
     }
