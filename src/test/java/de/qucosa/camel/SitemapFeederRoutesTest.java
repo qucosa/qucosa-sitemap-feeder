@@ -1,8 +1,9 @@
 package de.qucosa.camel;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import de.qucosa.camel.model.Url;
+import de.qucosa.camel.utils.DateTimeConverter;
 import de.qucosa.data.KafkaTopicData;
-import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.AdviceWithRouteBuilder;
 import org.apache.camel.component.kafka.KafkaComponent;
 import org.apache.camel.component.kafka.KafkaConstants;
@@ -64,7 +65,14 @@ public class SitemapFeederRoutesTest {
                 weaveById(APPEND_FEDORA_OBJ_INFO)
                         .replace()
                         .process(exchange -> {
-                            exchange.getIn().setBody("Hallo Welt");
+                            exchange.setProperty("objectState", "A");
+                            exchange.setProperty("eventType", "create");
+                            Url url = new Url();
+                            url.setUrlSetUri("tud");
+                            url.setLoc("https://tud/id/qucosa%3A12164");
+                            url.setLastmod(DateTimeConverter.getCurrentW3cDatetime());
+
+                            exchange.getIn().setBody(url);
                         });
 
                 weaveByToUri("direct:sitemap_create_url").replace().to("mock:ingest");
