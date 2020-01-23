@@ -37,9 +37,6 @@ public class AppendFedoraObjectInfo implements AggregationStrategy {
 
     @Override
     public Exchange aggregate(Exchange original, Exchange resource) {
-        String originalJsonBody = original.getIn().getBody(String.class);
-        Document fedoraObjectInformationResponse = resource.getIn().getBody(Document.class);
-
         UrlObjectBuilder urlObjectBuilder = new UrlObjectBuilder(
                 original.getIn().getBody(FedoraUpdateEvent.class),
                 resource.getIn().getBody(Document.class),
