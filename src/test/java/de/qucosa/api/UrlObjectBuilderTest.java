@@ -9,7 +9,6 @@ import de.qucosa.events.FedoraUpdateEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.w3c.dom.Document;
 
 import java.io.IOException;
 import java.util.List;
@@ -38,21 +37,11 @@ public class UrlObjectBuilderTest {
         assertEquals(url.getLoc(), "https://tud/id/qucosa%3A12164");
     }
 
-    private Document document() {
-        return DocumentXmlUtils.document(getClass().getResourceAsStream("/fedora/qucosa:12164.xml"), false);
-    }
-
-    private List<Tenant> tenants() throws IOException {
-        return objectMapper.readValue(getClass().getResourceAsStream("/config/tenant.json"),
-                objectMapper.getTypeFactory().constructCollectionType(List.class, Tenant.class));
-    }
-
-    private FedoraUpdateEvent event() throws IOException {
-        FedoraUpdateEvent event = objectMapper.readValue(KafkaTopicData.JSON_CREATE_EVENT, FedoraUpdateEvent.class);
-        return event;
-    }
-
     private UrlObjectBuilder urlObjectBuilder() throws IOException {
-        return new UrlObjectBuilder(event(), document(), tenants());
+
+        return new UrlObjectBuilder(
+            objectMapper.readValue(KafkaTopicData.JSON_CREATE_EVENT, FedoraUpdateEvent.class),
+            DocumentXmlUtils.document(getClass().getResourceAsStream("/fedora/qucosa:12164.xml"), true),
+            objectMapper.readValue(getClass().getResourceAsStream("/config/tenant.json"), objectMapper.getTypeFactory().constructCollectionType(List.class, Tenant.class)));
     }
 }
