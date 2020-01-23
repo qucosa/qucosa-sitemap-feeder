@@ -1,4 +1,4 @@
-<objectProfile xsi:schemaLocation="http://www.fedora.info/definitions/1/0/access/ http://www.fedora.info/definitions/1/0/objectProfile.xsd" pid="qucosa:12164">
+<objectProfile  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.fedora.info/definitions/1/0/access/ http://www.fedora.info/definitions/1/0/objectProfile.xsd" pid="qucosa:12164">
     <objLabel>Object created through the SWORD deposit system</objLabel>
     <objOwnerId>tud</objOwnerId>
     <objModels>
