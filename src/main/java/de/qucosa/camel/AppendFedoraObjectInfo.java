@@ -17,21 +17,14 @@
 
 package de.qucosa.camel;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import de.qucosa.api.UrlObjectBuilder;
 import de.qucosa.camel.model.Tenant;
-import de.qucosa.camel.utils.DocumentXmlUtils;
+import de.qucosa.events.FedoraUpdateEvent;
 import org.apache.camel.Exchange;
-import org.apache.camel.json.simple.JsonObject;
 import org.apache.camel.processor.aggregate.AggregationStrategy;
 import org.w3c.dom.Document;
 
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpressionException;
-import java.io.IOException;
-import java.util.Collections;
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 public class AppendFedoraObjectInfo implements AggregationStrategy {
@@ -46,55 +39,19 @@ public class AppendFedoraObjectInfo implements AggregationStrategy {
     public Exchange aggregate(Exchange original, Exchange resource) {
         String originalJsonBody = original.getIn().getBody(String.class);
         Document fedoraObjectInformationResponse = resource.getIn().getBody(Document.class);
-        XPath xPath = DocumentXmlUtils.xpath(Collections.singletonMap("obj", "http://www.fedora.info/definitions/1/0/access/"));
 
-        String fedoraTenantName = null;
-        String fedoraObjectState = null;
+        UrlObjectBuilder urlObjectBuilder = new UrlObjectBuilder(
+                original.getIn().getBody(FedoraUpdateEvent.class),
+                resource.getIn().getBody(Document.class),
+                tenants
+        );
+
+        original.setProperty("objectState", urlObjectBuilder.objectState());
 
         try {
-            fedoraTenantName = xPath.compile("//obj:objectProfile/obj:objOwnerId/text()")
-                    .evaluate(fedoraObjectInformationResponse, XPathConstants.STRING).toString();
-            fedoraObjectState = xPath.compile("//obj:objectProfile/obj:objState/text()")
-                    .evaluate(fedoraObjectInformationResponse, XPathConstants.STRING).toString();
-        } catch (XPathExpressionException e) {
-            System.out.println("error getting tenant/objOwnerId for object.");
-        }
-
-        Tenant tenant = null;
-
-        for (Tenant obj : tenants) {
-
-            if (obj.getName().equals(fedoraTenantName)) {
-                tenant = obj;
-            }
-        }
-
-        if (tenant == null) {
-            throw new RuntimeException("Cannot found fedora tenant " + fedoraTenantName + " in tenatns config.");
-        }
-
-        if (tenant.getSmall() == null || tenant.getSmall().isEmpty() ||
-            tenant.getHost() == null || tenant.getHost().isEmpty()) {
-            throw new RuntimeException("Small or large name definition for tenant " + fedoraTenantName + " failed.");
-        }
-
-        if (fedoraObjectState == null) {
-            throw new RuntimeException("Fedora Object state missing.");
-        }
-
-        // append tenant (urlset-name)
-        ObjectMapper mapper = new ObjectMapper();
-        try {
-            JsonNode jsonInfo = mapper.readTree(originalJsonBody);
-            ObjectNode node = (ObjectNode) jsonInfo;
-
-            node.put("tenant_urlset", tenant.getSmall());
-            node.put("tenant_url", tenant.getHost());
-            node.put("objectState", fedoraObjectState);
-
-            original.getIn().setBody(node.toString(), JsonObject.class);
-        } catch (IOException e) {
-            System.out.println("Problem reading json-info from exchange-body.");
+            original.getIn().setBody(urlObjectBuilder.sitemapUrlObject());
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException("URL encoded error.", e);
         }
 
         return original;
