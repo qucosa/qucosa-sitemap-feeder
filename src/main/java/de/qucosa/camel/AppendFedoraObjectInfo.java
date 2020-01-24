@@ -17,6 +17,7 @@
 
 package de.qucosa.camel;
 
+import de.qucosa.api.EventTypeExtractor;
 import de.qucosa.api.UrlObjectBuilder;
 import de.qucosa.camel.model.Tenant;
 import de.qucosa.events.FedoraUpdateEvent;
@@ -46,7 +47,7 @@ public class AppendFedoraObjectInfo implements AggregationStrategy {
         );
 
         original.setProperty("objectState", urlObjectBuilder.objectState());
-        original.setProperty("eventType", event.getEventType());
+        original.setProperty("eventType", EventTypeExtractor.extract(event.getEventType()));
 
         try {
             original.getIn().setBody(urlObjectBuilder.sitemapUrlObject());
