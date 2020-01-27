@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.util.Properties;
 
 import static de.qucosa.camel.config.EndpointUris.DIRECT_CREATE_URL;
+import static de.qucosa.camel.config.EndpointUris.DIRECT_DELETE_URL;
 import static de.qucosa.camel.config.RouteIds.APPEND_FEDORA_3_OBJ_INFO;
 import static de.qucosa.camel.config.RouteIds.KAFKA_SITEMAP_CONSUMER_ID;
 
@@ -86,7 +87,7 @@ public class SitemapFeederRoutesTest {
         objState = "A";
         eventType = "create";
 
-        camelContext.getRouteDefinition(KAFKA_SITEMAP_CONSUMER_ID).adviceWith(camelContext, createOrUpdate());
+        camelContext.getRouteDefinition(KAFKA_SITEMAP_CONSUMER_ID).adviceWith(camelContext, urlCUD(DIRECT_CREATE_URL,"saveUrl"));
 
         MockEndpoint saveUrl = camelContext.getEndpoint("mock:saveUrl", MockEndpoint.class);
         saveUrl.expectedMessageCount(1);
@@ -103,7 +104,7 @@ public class SitemapFeederRoutesTest {
         objState = "A";
         eventType = "update";
 
-        camelContext.getRouteDefinition(KAFKA_SITEMAP_CONSUMER_ID).adviceWith(camelContext, createOrUpdate());
+        camelContext.getRouteDefinition(KAFKA_SITEMAP_CONSUMER_ID).adviceWith(camelContext, urlCUD(DIRECT_CREATE_URL,"saveUrl"));
 
         MockEndpoint saveUrl = camelContext.getEndpoint("mock:saveUrl", MockEndpoint.class);
         saveUrl.expectedMessageCount(1);
@@ -112,7 +113,24 @@ public class SitemapFeederRoutesTest {
         camelContext.stop();
     }
 
-    private AdviceWithRouteBuilder createOrUpdate() {
+    @Test
+    @Order(3)
+    @DisplayName("Delete sitemap url.")
+    public void delete() throws Exception {
+        kafkaProducer.send(producerRecord(KafkaTopicData.JSON_DELETE_EVENT));
+        objState = "A";
+        eventType = "delete";
+
+        camelContext.getRouteDefinition(KAFKA_SITEMAP_CONSUMER_ID).adviceWith(camelContext, urlCUD(DIRECT_DELETE_URL,"deleteUrl"));
+
+        MockEndpoint deleteUrl = camelContext.getEndpoint("mock:deleteUrl", MockEndpoint.class);
+        deleteUrl.expectedMessageCount(1);
+        camelContext.start();
+        deleteUrl.assertIsSatisfied();
+        camelContext.stop();
+    }
+
+    private AdviceWithRouteBuilder urlCUD(String sitemapUri, String mock) {
         return new AdviceWithRouteBuilder() {
             @Override
             public void configure() throws Exception {
@@ -129,7 +147,7 @@ public class SitemapFeederRoutesTest {
                             exchange.getIn().setBody(url);
                         });
 
-                weaveByToUri(DIRECT_CREATE_URL).replace().to("mock:saveUrl");
+                weaveByToUri(sitemapUri).replace().to("mock:" + mock);
             }
         };
     }
