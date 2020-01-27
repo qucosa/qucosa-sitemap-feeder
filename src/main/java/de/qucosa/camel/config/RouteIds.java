@@ -22,4 +22,5 @@ public class RouteIds {
     public static final String APPEND_FEDORA_3_OBJ_INFO = "append_fedora_3_object_info";
     public static final String FEDORA_3_OBJECTINFO_ID = "fedora_3_object_info_id";
     public static final String SITEMAP_CREATE_URL_ID = "sitemap_create_url_id";
+    public static final String SITEMAP_DELETE_URL_ID = "sitemap_delete_url_id";
 }
