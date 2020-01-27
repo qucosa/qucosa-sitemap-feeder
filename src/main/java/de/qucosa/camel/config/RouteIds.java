@@ -19,8 +19,10 @@ package de.qucosa.camel.config;
 
 public class RouteIds {
     public static final String KAFKA_SITEMAP_CONSUMER_ID = "sitemap_consumer_id";
-    public static final String APPEND_FEDORA_3_OBJ_INFO = "append_fedora_3_object_info";
+    public static final String SITEMAP_CONSUMER_APPEND_OBJ_INFO = "sitemap_consumer_append_obj_info";
+    public static final String BULK_INSERT_APPEND_OBJ_INFO = "bulk_insert_append_obj_info";
     public static final String FEDORA_3_OBJECTINFO_ID = "fedora_3_object_info_id";
     public static final String SITEMAP_CREATE_URL_ID = "sitemap_create_url_id";
     public static final String SITEMAP_DELETE_URL_ID = "sitemap_delete_url_id";
+    public static final String PUSH_TO_SERVICE_ID = "push_to_service_id";
 }
