@@ -18,13 +18,8 @@
 package de.qucosa.camel.config;
 
 public class RouteIds {
-    public static final String ACTIVEMQ_ROUTE = "amq_update_event_route";
-    public static final String KAFKA_BULK_INSERT_ROUTE = "kafka_bulk_insert_route";
-    public static final String KAFKA_BULK_DELETE_ROUTE = "kafka_bulk_delete_route";
-    public static final String SITEMAP_FEEDER_ROUTE = "sitemap_feeder";
-    public static final String APPEND_FEDORA_OBJ_INFO = "append_fedora_object_info";
-    public static final String HTTP_INGEST_ID = "ingest";
-    public static final String HTTP_ADD_DATASTREAM_ID = "add_datastream";
-    public static final String HTTP_PURGE_OBJECT_ID = "purge_object";
-    public static final String HTTP_MODIFY_OBJECT_ID = "modify_object";
+    public static final String KAFKA_SITEMAP_CONSUMER_ID = "sitemap_consumer_id";
+    public static final String APPEND_FEDORA_3_OBJ_INFO = "append_fedora_3_object_info";
+    public static final String FEDORA_3_OBJECTINFO_ID = "fedora_3_object_info_id";
+    public static final String SITEMAP_CREATE_URL_ID = "sitemap_create_url_id";
 }
