@@ -2,6 +2,7 @@ package de.qucosa.camel;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import de.qucosa.camel.model.Url;
+import de.qucosa.camel.routebuilders.SitemapFeederRoutes;
 import de.qucosa.camel.utils.DateTimeConverter;
 import de.qucosa.data.KafkaTopicData;
 import org.apache.camel.builder.AdviceWithRouteBuilder;

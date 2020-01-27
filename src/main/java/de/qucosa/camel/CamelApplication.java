@@ -1,5 +1,6 @@
 package de.qucosa.camel;
 
+import de.qucosa.camel.routebuilders.SitemapFeederRoutes;
 import org.apache.camel.main.Main;
 
 public class CamelApplication {

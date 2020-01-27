@@ -1,4 +1,4 @@
-package de.qucosa.camel;
+package de.qucosa.camel.routebuilders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.qucosa.camel.model.Tenant;
