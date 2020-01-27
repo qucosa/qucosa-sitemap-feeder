@@ -2,6 +2,7 @@ package de.qucosa.camel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.qucosa.camel.model.Tenant;
+import de.qucosa.camel.strategies.AppendFedoraObjectInfo;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.http4.HttpMethods;

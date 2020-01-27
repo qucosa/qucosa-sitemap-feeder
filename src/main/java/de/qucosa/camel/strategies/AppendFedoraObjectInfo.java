@@ -15,7 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.qucosa.camel;
+package de.qucosa.camel.strategies;
 
 import de.qucosa.api.EventTypeExtractor;
 import de.qucosa.api.UrlObjectBuilder;
