@@ -11,6 +11,7 @@ import org.apache.camel.component.kafka.KafkaComponent;
 import java.util.List;
 
 import static de.qucosa.camel.config.EndpointUris.DIRECT_CREATE_URL;
+import static de.qucosa.camel.config.EndpointUris.DIRECT_DELETE_URL;
 import static de.qucosa.camel.config.EndpointUris.FEDORA_3_OBJECTINFO;
 import static de.qucosa.camel.config.EndpointUris.KAFKA_SITEMAP_CONSUMER;
 import static de.qucosa.camel.config.EndpointUris.SITEMAP_SERVICE_CREATE_URL;
@@ -18,6 +19,7 @@ import static de.qucosa.camel.config.RouteIds.APPEND_FEDORA_3_OBJ_INFO;
 import static de.qucosa.camel.config.RouteIds.FEDORA_3_OBJECTINFO_ID;
 import static de.qucosa.camel.config.RouteIds.KAFKA_SITEMAP_CONSUMER_ID;
 import static de.qucosa.camel.config.RouteIds.SITEMAP_CREATE_URL_ID;
+import static de.qucosa.camel.config.RouteIds.SITEMAP_DELETE_URL_ID;
 
 public class SitemapFeederRoutes extends RouteBuilder {
 
@@ -29,7 +31,7 @@ public class SitemapFeederRoutes extends RouteBuilder {
 
         from(KAFKA_SITEMAP_CONSUMER)
                 .routeId(KAFKA_SITEMAP_CONSUMER_ID)
-                .enrich("seda:objectinfo", new AppendFedoraObjectInfo(tenants())).id(APPEND_FEDORA_3_OBJ_INFO)
+                .enrich(FEDORA_3_OBJECTINFO, new AppendFedoraObjectInfo(tenants())).id(APPEND_FEDORA_3_OBJ_INFO)
                 .choice()
                     .when(simple("${property.objectState} == 'A'"))
                         .choice()
@@ -55,6 +57,13 @@ public class SitemapFeederRoutes extends RouteBuilder {
                 .throttle(10)
                 .to(SITEMAP_SERVICE_CREATE_URL);
 
+        from(DIRECT_DELETE_URL)
+                .routeId(SITEMAP_DELETE_URL_ID)
+                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
+                .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
+                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                .to("http4://{{sitemap.service.url}}/url?throwExceptionOnFailure=false");
+
         // route to update sitemap via pid's (post qucosa-ID's (qucosa:12345) to kafka topic "pidupdate")
 //        from("kafka:pidupdate?groupId=bulkinsert")
 //                .routeId(KAFKA_BULK_INSERT_ROUTE)
@@ -75,14 +84,6 @@ public class SitemapFeederRoutes extends RouteBuilder {
 //                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
 //                .recipientList(simple("http4://{{sitemap.service.url}}/urlsets/${exchangeProperty.tenant}?throwExceptionOnFailure=false"));
 //
-//        from("direct:sitemap_delete_url")
-//                .routeId("deleteUrlRoute")
-//                .setProperty("tenant", jsonpath("$.tenant_urlset"))
-//                .process(new UrlFormatProcessor())
-//                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
-//                .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
-//                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-//                .recipientList(simple("http4://{{sitemap.service.url}}/urlsets/${exchangeProperty.tenant}/deleteurl?throwExceptionOnFailure=false"));
 
 //        from("direct:sitemap_modify_url_lastmod")
 //                .routeId("modifyUrlRoute")
