@@ -15,7 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.qucosa.camel.utils;
+package de.qucosa.camel.config;
 
 public class RouteIds {
     public static final String ACTIVEMQ_ROUTE = "amq_update_event_route";
