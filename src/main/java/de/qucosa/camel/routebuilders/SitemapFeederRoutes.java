@@ -2,9 +2,10 @@ package de.qucosa.camel.routebuilders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.qucosa.camel.model.Tenant;
+import de.qucosa.camel.policies.FedoraServicePolicy;
+import de.qucosa.camel.policies.SitemapServicePolicy;
 import de.qucosa.camel.processors.FedoraEventCreator;
 import de.qucosa.camel.strategies.AppendFedoraObjectInfo;
-import de.qucosa.events.FedoraUpdateEvent;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.http4.HttpMethods;
@@ -77,11 +78,13 @@ public class SitemapFeederRoutes extends RouteBuilder {
         // This route is for fedora 3 only.
         from(FEDORA_3_OBJECTINFO)
                 .routeId(FEDORA_3_OBJECTINFO_ID)
+                .routePolicy(new FedoraServicePolicy())
                 .setProperty("pid", jsonpath("$['org.fcrepo.jms.identifier']"))
                 .recipientList(simple(FEDORA_SERVICE_URI + "fedora/objects/${property.pid}?format=xml"));
 
         from(DIRECT_CREATE_URI)
                 .routeId(SITEMAP_CREATE_URL_ID)
+                .routePolicy(new SitemapServicePolicy())
                 .log("create_url (json): ${body}")
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
@@ -91,6 +94,7 @@ public class SitemapFeederRoutes extends RouteBuilder {
 
         from(DIRECT_DELETE_URI)
                 .routeId(SITEMAP_DELETE_URL_ID)
+                .routePolicy(new SitemapServicePolicy())
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
