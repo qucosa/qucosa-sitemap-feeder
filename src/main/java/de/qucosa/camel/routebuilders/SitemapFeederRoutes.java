@@ -70,10 +70,10 @@ public class SitemapFeederRoutes extends RouteBuilder {
                                 .to(DIRECT_CREATE_URI)
                             .when(simple("${property.eventType} == 'delete'"))
                                 .to(DIRECT_DELETE_URI)
+                        .endChoice()
                     .otherwise()
-                        // @TODO delete url from sitemap
-                        .to(DIRECT_DELETE_URI);
-
+                        .to(DIRECT_DELETE_URI)
+                .endChoice();
 
         // This route is for fedora 3 only.
         from(FEDORA_3_OBJECTINFO)
