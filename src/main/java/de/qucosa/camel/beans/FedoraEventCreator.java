@@ -7,7 +7,7 @@ public class FedoraEventCreator {
 
     public void createEvent(Exchange exchange) throws Exception {
         FedoraUpdateEvent event = new FedoraUpdateEvent();
-        event.setEventType("create");
+        event.setEventType(exchange.getProperty("eventType").toString());
         event.setIdentifier(exchange.getIn().getBody(String.class));
         exchange.getIn().setBody(event);
     }
