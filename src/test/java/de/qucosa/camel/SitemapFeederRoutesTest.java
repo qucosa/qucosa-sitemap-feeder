@@ -36,10 +36,13 @@ import java.util.Properties;
 
 import static de.qucosa.camel.config.EndpointUris.DIRECT_CREATE_URI;
 import static de.qucosa.camel.config.EndpointUris.DIRECT_DELETE_URI;
-import static de.qucosa.camel.config.EndpointUris.KAFKA_BULK_INSERT_ROUTE;
 import static de.qucosa.camel.config.EndpointUris.PUSH_TO_SERVICE;
+import static de.qucosa.camel.config.RouteIds.BULK_DELETE_APPEND_OBJ_INFO;
+import static de.qucosa.camel.config.RouteIds.BULK_DELETE_PUSH_TO_SERVICE;
 import static de.qucosa.camel.config.RouteIds.BULK_INSERT_APPEND_OBJ_INFO;
 import static de.qucosa.camel.config.RouteIds.BULK_INSERT_PUSH_TO_SERVICE;
+import static de.qucosa.camel.config.RouteIds.KAFKA_BULK_DELETE_ID;
+import static de.qucosa.camel.config.RouteIds.KAFKA_BULK_INSERT_ID;
 import static de.qucosa.camel.config.RouteIds.KAFKA_SITEMAP_CONSUMER_ID;
 import static de.qucosa.camel.config.RouteIds.SITEMAP_CONSUMER_APPEND_OBJ_INFO;
 import static de.qucosa.camel.config.RouteIds.SITEMAP_CONSUMER_PUSH_TO_SERVICE;
@@ -159,16 +162,37 @@ public class SitemapFeederRoutesTest {
     }
 
     @Test
-    @DisplayName("Create url object by PID from kafka bulkinsert consumer.")
+    @DisplayName("Create url object by PID from kafka pidinsert consumer.")
     public void createFromBulkInsert() throws Exception {
         ProducerRecord<String, String> record = new ProducerRecord<>("pidupdate", 0, "qucosa:12164", "qucosa:12164");
         kafkaProducer.send(record);
 
-        camelContext.getRouteDefinition(KAFKA_BULK_INSERT_ROUTE).adviceWith(camelContext, new AdviceWithRouteBuilder() {
+        camelContext.getRouteDefinition(KAFKA_BULK_INSERT_ID).adviceWith(camelContext, new AdviceWithRouteBuilder() {
             @Override
             public void configure() throws Exception {
                 weaveById(BULK_INSERT_APPEND_OBJ_INFO).remove();
                 weaveById(BULK_INSERT_PUSH_TO_SERVICE).replace().to("mock:pushToService");
+            }
+        });
+
+        MockEndpoint pushToService = camelContext.getEndpoint("mock:pushToService", MockEndpoint.class);
+        pushToService.expectedMessageCount(1);
+        camelContext.start();
+        pushToService.assertIsSatisfied();
+        camelContext.stop();
+    }
+
+    @Test
+    @DisplayName("Create url object by PID from kafka piddelete consumer.")
+    public void createFromBulkDelete() throws Exception {
+        ProducerRecord<String, String> record = new ProducerRecord<>("piddelete", 0, "qucosa:12164", "qucosa:12164");
+        kafkaProducer.send(record);
+
+        camelContext.getRouteDefinition(KAFKA_BULK_DELETE_ID).adviceWith(camelContext, new AdviceWithRouteBuilder() {
+            @Override
+            public void configure() throws Exception {
+                weaveById(BULK_DELETE_APPEND_OBJ_INFO).remove();
+                weaveById(BULK_DELETE_PUSH_TO_SERVICE).replace().to("mock:pushToService");
             }
         });
 
