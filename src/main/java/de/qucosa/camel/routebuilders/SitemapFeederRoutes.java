@@ -102,6 +102,7 @@ public class SitemapFeederRoutes extends RouteBuilder {
 
         from(KAFKA_BULK_INSERT_CONSUMER)
                 .routeId(KAFKA_BULK_INSERT_ID)
+                .setProperty("eventType", simple("create"))
                 .bean(FedoraEventCreator.class, "createEvent")
                 .enrich(FEDORA_3_OBJECTINFO, new AppendFedoraObjectInfo(tenants())).id(BULK_INSERT_APPEND_OBJ_INFO)
                 // set/get method/tenant/pid/encodedpid
@@ -109,6 +110,7 @@ public class SitemapFeederRoutes extends RouteBuilder {
 
         from(KAFKA_BULK_DELETE_CONSUMER)
                 .routeId(KAFKA_BULK_DELETE_ID)
+                .setProperty("eventType", simple("delete"))
                 .bean(FedoraEventCreator.class, "createEvent")
                 .enrich(FEDORA_3_OBJECTINFO, new AppendFedoraObjectInfo(tenants())).id(BULK_DELETE_APPEND_OBJ_INFO)
                 .to(PUSH_TO_SERVICE).id(BULK_DELETE_PUSH_TO_SERVICE);
