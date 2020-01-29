@@ -72,7 +72,7 @@ public class SitemapFeederRoutes extends RouteBuilder {
                                 .to(DIRECT_DELETE_URI)
                     .otherwise()
                         // @TODO delete url from sitemap
-                        .to("mock:otherwise");
+                        .to(DIRECT_DELETE_URI);
 
 
         // This route is for fedora 3 only.
