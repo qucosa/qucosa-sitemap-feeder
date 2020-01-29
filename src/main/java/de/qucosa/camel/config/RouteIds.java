@@ -30,4 +30,6 @@ public class RouteIds {
     public final static String KAFKA_BULK_DELETE_ID = "bulk_delete_consumer_id";
     public final static String BULK_DELETE_PUSH_TO_SERVICE = "bulk_delete_push_to_service";
     public final static String BULK_DELETE_APPEND_OBJ_INFO = "bulk_delete_append_obj_info";
+    public static final String FEDORA_SERVICE_OBSERVER_ID = "fedora_service_observer_id";
+    public static final String SITEMAP_SERVICE_OBSERVER_ID = "sitemap_service_observer_id";
 }
