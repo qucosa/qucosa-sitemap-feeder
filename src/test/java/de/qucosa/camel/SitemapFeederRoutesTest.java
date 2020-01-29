@@ -46,7 +46,7 @@ import static de.qucosa.camel.config.RouteIds.KAFKA_SITEMAP_CONSUMER_ID;
 import static de.qucosa.camel.config.RouteIds.SITEMAP_CONSUMER_APPEND_OBJ_INFO;
 import static de.qucosa.camel.config.RouteIds.SITEMAP_CONSUMER_PUSH_TO_SERVICE;
 
-@DisplayName("Test dataflow activeMQ -> kafka -> sitemap service.")
+@DisplayName("Test dataflow kafka -> sitemap service.")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(value = MethodOrderer.OrderAnnotation.class)
 @Testcontainers
