@@ -9,4 +9,7 @@ public class EndpointUris {
     public final static String DIRECT_DELETE_URI = "direct:sitemap_delete_url";
     public final static String PUSH_TO_SERVICE = "direct:push_to_service";
     public final static String SITEMAP_SERVICE_URI = "http4://{{sitemap.service.url}}/url";
+    public final static String FEDORA_SERVICE_URI = "http4://{{fedora.service.url}}/";
+    public static final String FEDORA_SERVICE_OBSERVER_URI = "timer:fedora_service_observer?period=3s";
+    public static final String SITEMAP_SERVICE_OBSERVER_URI = "timer:sitemap_service_observer?period=3s";
 }
