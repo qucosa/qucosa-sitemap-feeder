@@ -2,6 +2,7 @@ package de.qucosa.camel.routebuilders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.qucosa.camel.model.Tenant;
+import de.qucosa.camel.processors.FedoraEventCreator;
 import de.qucosa.camel.strategies.AppendFedoraObjectInfo;
 import de.qucosa.events.FedoraUpdateEvent;
 import org.apache.camel.Exchange;
@@ -14,14 +15,18 @@ import java.util.List;
 import static de.qucosa.camel.config.EndpointUris.DIRECT_CREATE_URI;
 import static de.qucosa.camel.config.EndpointUris.DIRECT_DELETE_URI;
 import static de.qucosa.camel.config.EndpointUris.FEDORA_3_OBJECTINFO;
+import static de.qucosa.camel.config.EndpointUris.KAFKA_BULK_DELETE_CONSUMER;
 import static de.qucosa.camel.config.EndpointUris.KAFKA_BULK_INSERT_CONSUMER;
-import static de.qucosa.camel.config.EndpointUris.KAFKA_BULK_INSERT_ROUTE;
 import static de.qucosa.camel.config.EndpointUris.KAFKA_SITEMAP_CONSUMER;
 import static de.qucosa.camel.config.EndpointUris.PUSH_TO_SERVICE;
 import static de.qucosa.camel.config.EndpointUris.SITEMAP_SERVICE_URI;
+import static de.qucosa.camel.config.RouteIds.BULK_DELETE_APPEND_OBJ_INFO;
+import static de.qucosa.camel.config.RouteIds.BULK_DELETE_PUSH_TO_SERVICE;
 import static de.qucosa.camel.config.RouteIds.BULK_INSERT_APPEND_OBJ_INFO;
 import static de.qucosa.camel.config.RouteIds.BULK_INSERT_PUSH_TO_SERVICE;
 import static de.qucosa.camel.config.RouteIds.FEDORA_3_OBJECTINFO_ID;
+import static de.qucosa.camel.config.RouteIds.KAFKA_BULK_DELETE_ID;
+import static de.qucosa.camel.config.RouteIds.KAFKA_BULK_INSERT_ID;
 import static de.qucosa.camel.config.RouteIds.KAFKA_SITEMAP_CONSUMER_ID;
 import static de.qucosa.camel.config.RouteIds.SITEMAP_CONSUMER_APPEND_OBJ_INFO;
 import static de.qucosa.camel.config.RouteIds.SITEMAP_CONSUMER_PUSH_TO_SERVICE;
@@ -74,29 +79,20 @@ public class SitemapFeederRoutes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-                .to("http4://{{sitemap.service.url}}/url?throwExceptionOnFailure=false");
+                .to(SITEMAP_SERVICE_URI);
 
-        // route to update sitemap via pid's (post qucosa-ID's (qucosa:12345) to kafka topic "pidupdate")
         from(KAFKA_BULK_INSERT_CONSUMER)
-                .routeId(KAFKA_BULK_INSERT_ROUTE)
-                .process(exchange -> {
-                    FedoraUpdateEvent event = new FedoraUpdateEvent();
-                    event.setEventType("create");
-                    event.setIdentifier(exchange.getIn().getBody(String.class));
-                    exchange.getIn().setBody(event);
-                })
+                .routeId(KAFKA_BULK_INSERT_ID)
+                .process(new FedoraEventCreator())
                 .enrich(FEDORA_3_OBJECTINFO, new AppendFedoraObjectInfo(tenants())).id(BULK_INSERT_APPEND_OBJ_INFO)
                 // set/get method/tenant/pid/encodedpid
                 .to(PUSH_TO_SERVICE).id(BULK_INSERT_PUSH_TO_SERVICE);
 
-
-
-
-        // route to update sitemap via pid's (post qucosa-ID's (qucosa:12345) to kafka topic "pidupdate")
-//        from("kafka:piddelete?groupId=bulkdelete")
-//                .routeId(KAFKA_BULK_DELETE_ROUTE)
-//                // set/get method/tenant/pid/encodedpid
-//                .to("kafka:sitemap_feeder");
+        from(KAFKA_BULK_DELETE_CONSUMER)
+                .routeId(KAFKA_BULK_DELETE_ID)
+                .process(new FedoraEventCreator())
+                .enrich(FEDORA_3_OBJECTINFO, new AppendFedoraObjectInfo(tenants())).id(BULK_DELETE_APPEND_OBJ_INFO)
+                .to(PUSH_TO_SERVICE).id(BULK_DELETE_PUSH_TO_SERVICE);
     }
 
     private List<Tenant> tenants() throws Exception {
