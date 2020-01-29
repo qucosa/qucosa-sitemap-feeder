@@ -202,6 +202,32 @@ public class SitemapFeederRoutesTest {
     }
 
     @Test
+    @DisplayName("Delete url from sitemap if document hast state inactive (I).")
+    public void deleteStateInactive() throws Exception {
+        ProducerTemplate producerTemplate = camelContext.createProducerTemplate();
+        camelContext.getRouteDefinition("push_service").adviceWith(camelContext, urlCUD(DIRECT_DELETE_URI,"mock:deleteUrl"));
+        MockEndpoint deleteUrl = camelContext.getEndpoint("mock:deleteUrl", MockEndpoint.class);
+        deleteUrl.expectedMessageCount(1);
+        camelContext.start();
+        producerTemplate.send(PUSH_TO_SERVICE, exchange("I", "delete"));
+        deleteUrl.assertIsSatisfied();
+        camelContext.stop();
+    }
+
+    @Test
+    @DisplayName("Delete url from sitemap if document hast state delete (D).")
+    public void deleteStateDelete() throws Exception {
+        ProducerTemplate producerTemplate = camelContext.createProducerTemplate();
+        camelContext.getRouteDefinition("push_service").adviceWith(camelContext, urlCUD(DIRECT_DELETE_URI,"mock:deleteUrl"));
+        MockEndpoint deleteUrl = camelContext.getEndpoint("mock:deleteUrl", MockEndpoint.class);
+        deleteUrl.expectedMessageCount(1);
+        camelContext.start();
+        producerTemplate.send(PUSH_TO_SERVICE, exchange("D", "delete"));
+        deleteUrl.assertIsSatisfied();
+        camelContext.stop();
+    }
+
+    @Test
     @DisplayName("Create url object by PID from kafka pidinsert consumer.")
     public void createFromBulkInsert() throws Exception {
         ProducerRecord<String, String> record = new ProducerRecord<>("pidupdate", 0, "qucosa:12164", "qucosa:12164");
