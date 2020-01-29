@@ -1,6 +1,5 @@
 package de.qucosa.camel;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import de.qucosa.camel.model.Url;
 import de.qucosa.camel.routebuilders.SitemapFeederRoutes;
 import de.qucosa.camel.utils.DateTimeConverter;
@@ -103,13 +102,54 @@ public class SitemapFeederRoutesTest {
     }
 
     @Test
-    @DisplayName("Push build url object to sitemap rest service.")
-    public void pushToService() throws Exception {
+    @DisplayName("Create 'create' url object and puah to sitemap service.")
+    public void pushToServiceCreate() throws Exception {
         kafkaProducer.send(producerRecord(KafkaTopicData.JSON_CREATE_EVENT));
 
         camelContext.getRouteDefinition(KAFKA_SITEMAP_CONSUMER_ID).adviceWith(camelContext, new AdviceWithRouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
+                weaveById(SITEMAP_CONSUMER_APPEND_OBJ_INFO).remove();
+                weaveById(SITEMAP_CONSUMER_PUSH_TO_SERVICE).replace().to("mock:pushToService");
+            }
+        });
+
+        MockEndpoint pushToService = camelContext.getEndpoint("mock:pushToService", MockEndpoint.class);
+        pushToService.expectedMessageCount(1);
+        camelContext.start();
+        pushToService.assertIsSatisfied();
+        camelContext.stop();
+    }
+
+    @Test
+    @DisplayName("Create 'update' url object and puah to sitemap service.")
+    public void pushToServiceUpdate() throws Exception {
+        kafkaProducer.send(producerRecord(KafkaTopicData.JSON_UPDATE_EVENT));
+
+        camelContext.getRouteDefinition(KAFKA_SITEMAP_CONSUMER_ID).adviceWith(camelContext, new AdviceWithRouteBuilder() {
+            @Override
+            public void configure() {
+                weaveById(SITEMAP_CONSUMER_APPEND_OBJ_INFO).remove();
+                weaveById(SITEMAP_CONSUMER_PUSH_TO_SERVICE).replace().to("mock:pushToService");
+            }
+        });
+
+        MockEndpoint pushToService = camelContext.getEndpoint("mock:pushToService", MockEndpoint.class);
+        pushToService.expectedMessageCount(1);
+        camelContext.start();
+        pushToService.assertIsSatisfied();
+        camelContext.stop();
+    }
+
+
+    @Test
+    @DisplayName("Create 'delete' url object and puah to sitemap service.")
+    public void pushToServiceDelete() throws Exception {
+        kafkaProducer.send(producerRecord(KafkaTopicData.JSON_DELETE_EVENT));
+
+        camelContext.getRouteDefinition(KAFKA_SITEMAP_CONSUMER_ID).adviceWith(camelContext, new AdviceWithRouteBuilder() {
+            @Override
+            public void configure() {
                 weaveById(SITEMAP_CONSUMER_APPEND_OBJ_INFO).remove();
                 weaveById(SITEMAP_CONSUMER_PUSH_TO_SERVICE).replace().to("mock:pushToService");
             }
@@ -169,7 +209,7 @@ public class SitemapFeederRoutesTest {
 
         camelContext.getRouteDefinition(KAFKA_BULK_INSERT_ID).adviceWith(camelContext, new AdviceWithRouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 weaveById(BULK_INSERT_APPEND_OBJ_INFO).remove();
                 weaveById(BULK_INSERT_PUSH_TO_SERVICE).replace().to("mock:pushToService");
             }
@@ -190,7 +230,7 @@ public class SitemapFeederRoutesTest {
 
         camelContext.getRouteDefinition(KAFKA_BULK_DELETE_ID).adviceWith(camelContext, new AdviceWithRouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 weaveById(BULK_DELETE_APPEND_OBJ_INFO).remove();
                 weaveById(BULK_DELETE_PUSH_TO_SERVICE).replace().to("mock:pushToService");
             }
@@ -223,7 +263,7 @@ public class SitemapFeederRoutesTest {
     private AdviceWithRouteBuilder urlCUD(String sitemapUri, String mock) {
         return new AdviceWithRouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 weaveByToUri(sitemapUri).replace().to(mock);
             }
         };
@@ -232,7 +272,7 @@ public class SitemapFeederRoutesTest {
     private AdviceWithRouteBuilder bulkInsertBuilder() {
         return new AdviceWithRouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 weaveById(BULK_INSERT_APPEND_OBJ_INFO).remove();
                 weaveById(BULK_INSERT_PUSH_TO_SERVICE).replace().to("mock:bulkInsert");
             }
@@ -246,11 +286,11 @@ public class SitemapFeederRoutesTest {
         prodProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaConstants.KAFKA_DEFAULT_SERIALIZER);
         prodProps.put(ProducerConfig.PARTITIONER_CLASS_CONFIG, KafkaConstants.KAFKA_DEFAULT_PARTITIONER);
         prodProps.put(ProducerConfig.ACKS_CONFIG, "1");
-        return new KafkaProducer<String, String>(prodProps);
+        return new KafkaProducer<>(prodProps);
     }
 
     @SuppressWarnings("unchecked")
-    private ProducerRecord<String, String> producerRecord(String data) throws JsonProcessingException {
+    private ProducerRecord<String, String> producerRecord(String data) {
         return (ProducerRecord<String, String>) new ProducerRecord(
                 "service_events",
                 0,
