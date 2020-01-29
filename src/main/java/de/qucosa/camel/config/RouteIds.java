@@ -26,4 +26,8 @@ public class RouteIds {
     public static final String SITEMAP_DELETE_URL_ID = "sitemap_delete_url_id";
     public static final String SITEMAP_CONSUMER_PUSH_TO_SERVICE = "sitemap_consumer_push_to_service";
     public static final String BULK_INSERT_PUSH_TO_SERVICE = "bulk_insert_push_to_service";
+    public final static String KAFKA_BULK_INSERT_ID = "bulk_insert_consumer_id";
+    public final static String KAFKA_BULK_DELETE_ID = "bulk_delete_consumer_id";
+    public final static String BULK_DELETE_PUSH_TO_SERVICE = "bulk_delete_push_to_service";
+    public final static String BULK_DELETE_APPEND_OBJ_INFO = "bulk_delete_append_obj_info";
 }
