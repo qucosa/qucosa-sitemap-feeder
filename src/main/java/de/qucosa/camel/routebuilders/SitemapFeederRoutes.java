@@ -105,7 +105,6 @@ public class SitemapFeederRoutes extends RouteBuilder {
                 .setProperty("eventType", simple("create"))
                 .bean(FedoraEventCreator.class, "createEvent")
                 .enrich(FEDORA_3_OBJECTINFO, new AppendFedoraObjectInfo(tenants())).id(BULK_INSERT_APPEND_OBJ_INFO)
-                // set/get method/tenant/pid/encodedpid
                 .to(PUSH_TO_SERVICE).id(BULK_INSERT_PUSH_TO_SERVICE);
 
         from(KAFKA_BULK_DELETE_CONSUMER)
