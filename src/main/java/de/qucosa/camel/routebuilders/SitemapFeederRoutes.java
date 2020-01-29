@@ -118,8 +118,7 @@ public class SitemapFeederRoutes extends RouteBuilder {
 
     private List<Tenant> tenants() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
-        List<Tenant> tenants = objectMapper.readValue(getClass().getResourceAsStream(getContext().resolvePropertyPlaceholders("{{conf.path}}") + "tenant.json"),
+        return objectMapper.readValue(getClass().getResourceAsStream(getContext().resolvePropertyPlaceholders("{{conf.path}}") + "tenant.json"),
                 objectMapper.getTypeFactory().constructCollectionType(List.class, Tenant.class));
-        return tenants;
     }
 }

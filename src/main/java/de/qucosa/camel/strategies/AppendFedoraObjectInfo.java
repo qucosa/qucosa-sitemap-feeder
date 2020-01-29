@@ -30,7 +30,7 @@ import java.util.List;
 
 public class AppendFedoraObjectInfo implements AggregationStrategy {
 
-    private List<Tenant> tenants;
+    private final List<Tenant> tenants;
 
     public AppendFedoraObjectInfo(List<Tenant> tenants) {
         this.tenants = tenants;

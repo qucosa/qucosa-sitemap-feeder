@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @DisplayName("Test dataflow activeMQ -> kafka -> sitemap service.")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class UrlObjectBuilderTest {
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Object state is fedora 3 only
     @Test

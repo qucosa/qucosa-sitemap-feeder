@@ -17,13 +17,13 @@ import java.util.List;
 
 public class UrlObjectBuilder {
 
-    private List<Tenant> tenants;
+    private final List<Tenant> tenants;
 
-    private Document document;
+    private final Document document;
 
-    private FedoraUpdateEvent event;
+    private final FedoraUpdateEvent event;
 
-    private XPath xPath = DocumentXmlUtils.xpath(Collections.singletonMap("obj", "http://www.fedora.info/definitions/1/0/access/"));
+    private final XPath xPath = DocumentXmlUtils.xpath(Collections.singletonMap("obj", "http://www.fedora.info/definitions/1/0/access/"));
 
     public UrlObjectBuilder(FedoraUpdateEvent event, Document document, List<Tenant> tenants) {
         this.document = document;
@@ -70,13 +70,12 @@ public class UrlObjectBuilder {
             }
         }
 
-        if (tenant == null) {
-            throw new RuntimeException("Cannot found fedora tenant " + fedoraTenantName + " in tenatns config.");
+        if (tenant.getSmall() == null || tenant.getHost() == null) {
+            throw new RuntimeException("Tenant " + fedoraTenantName + " has failed properties.");
         }
 
-        if (tenant.getSmall() == null || tenant.getSmall().isEmpty() ||
-                tenant.getHost() == null || tenant.getHost().isEmpty()) {
-            throw new RuntimeException("Small or host name definition for tenant " + fedoraTenantName + " failed.");
+        if (tenant.getSmall().isEmpty() || tenant.getHost().isEmpty()) {
+            throw new RuntimeException("Tenant object " + fedoraTenantName + " has empty property values.");
         }
 
         return tenant;

@@ -38,7 +38,7 @@ public class FedoraEventCreatorTest {
 
     @Test
     @DisplayName("Test if the eventType is create.")
-    public void create() throws Exception {
+    public void create() {
         exchange.setProperty("eventType", "create");
         eventCreator.createEvent(exchange);
         FedoraUpdateEvent event = exchange.getIn().getBody(FedoraUpdateEvent.class);
@@ -49,7 +49,7 @@ public class FedoraEventCreatorTest {
 
     @Test
     @DisplayName("Test if the eventType is delete.")
-    public void delete() throws Exception {
+    public void delete() {
         exchange.setProperty("eventType", "delete");
         eventCreator.createEvent(exchange);
         FedoraUpdateEvent event = exchange.getIn().getBody(FedoraUpdateEvent.class);
