@@ -1,10 +1,10 @@
 package de.qucosa.camel.routebuilders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import de.qucosa.camel.beans.FedoraEventCreator;
 import de.qucosa.camel.model.Tenant;
 import de.qucosa.camel.policies.FedoraServicePolicy;
 import de.qucosa.camel.policies.SitemapServicePolicy;
-import de.qucosa.camel.processors.FedoraEventCreator;
 import de.qucosa.camel.strategies.AppendFedoraObjectInfo;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
@@ -102,14 +102,14 @@ public class SitemapFeederRoutes extends RouteBuilder {
 
         from(KAFKA_BULK_INSERT_CONSUMER)
                 .routeId(KAFKA_BULK_INSERT_ID)
-                .process(new FedoraEventCreator())
+                .bean(FedoraEventCreator.class, "createEvent")
                 .enrich(FEDORA_3_OBJECTINFO, new AppendFedoraObjectInfo(tenants())).id(BULK_INSERT_APPEND_OBJ_INFO)
                 // set/get method/tenant/pid/encodedpid
                 .to(PUSH_TO_SERVICE).id(BULK_INSERT_PUSH_TO_SERVICE);
 
         from(KAFKA_BULK_DELETE_CONSUMER)
                 .routeId(KAFKA_BULK_DELETE_ID)
-                .process(new FedoraEventCreator())
+                .bean(FedoraEventCreator.class, "createEvent")
                 .enrich(FEDORA_3_OBJECTINFO, new AppendFedoraObjectInfo(tenants())).id(BULK_DELETE_APPEND_OBJ_INFO)
                 .to(PUSH_TO_SERVICE).id(BULK_DELETE_PUSH_TO_SERVICE);
     }
