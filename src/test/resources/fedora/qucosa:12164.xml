@@ -1,0 +1,17 @@
+<objectProfile  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.fedora.info/definitions/1/0/access/ http://www.fedora.info/definitions/1/0/objectProfile.xsd" pid="qucosa:12164">
+    <objLabel>Object created through the SWORD deposit system</objLabel>
+    <objOwnerId>tud</objOwnerId>
+    <objModels>
+        <model>info:fedora/qucosa:CModel</model>
+        <model>info:fedora/fedora-system:FedoraObject-3.0</model>
+    </objModels>
+    <objCreateDate>2018-08-07T09:35:13.109Z</objCreateDate>
+    <objLastModDate>2019-12-17T13:58:26.520Z</objLastModDate>
+    <objDissIndexViewURL>
+        http://localhost:8080/fedora/objects/qucosa%3A30072/methods/fedora-system%3A3/viewMethodIndex
+    </objDissIndexViewURL>
+    <objItemIndexViewURL>
+        http://localhost:8080/fedora/objects/qucosa%3A30072/methods/fedora-system%3A3/viewItemIndex
+    </objItemIndexViewURL>
+    <objState>A</objState>
+</objectProfile>

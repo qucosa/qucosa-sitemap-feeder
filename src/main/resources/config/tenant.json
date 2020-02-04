@@ -1,0 +1,47 @@
+[
+  {
+    "name" : "ubl",
+    "small" : "ul",
+    "host" : "ul.qucosa.de"
+  },
+  {
+    "name" : "ubc",
+    "small" : "monarch",
+    "host" : "monarch.qucosa.de"
+  },
+  {
+    "name" : "htw",
+    "small" : "htw-dresden",
+    "host" : "htw-dresden.qucosa.de"
+  },
+  {
+    "name" : "fid-move",
+    "small" : "publish.fid-move",
+    "host" : "publish.fid-move.de"
+  },
+  {
+    "name" : "slub",
+    "small" : "slub",
+    "host" : "slub.qucosa.de"
+  },
+  {
+    "name" : "tubaf",
+    "small" : "tubaf",
+    "host" : "tubaf.qucosa.de"
+  },
+  {
+    "name" : "hzdr",
+    "small" : "hzdr",
+    "host" : "hzdr.qucosa.de"
+  },
+  {
+    "name" : "tud",
+    "small" : "tud",
+    "host" : "tud.qucosa.de"
+  },
+  {
+    "name" : "diu",
+    "small" : "diu",
+    "host" : "diu.qucosa.de"
+  }
+]

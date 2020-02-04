@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class DocumentXmlUtils {
@@ -132,7 +133,7 @@ public class DocumentXmlUtils {
     }
 
     public static Document stringToDocument(String xmlString) throws IOException, SAXException {
-        return db.parse(new ByteArrayInputStream(xmlString.getBytes("UTF-8")));
+        return db.parse(new ByteArrayInputStream(xmlString.getBytes(StandardCharsets.UTF_8)));
     }
 }
 
