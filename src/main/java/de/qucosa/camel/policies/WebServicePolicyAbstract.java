@@ -3,8 +3,6 @@ package de.qucosa.camel.policies;
 import org.apache.camel.CamelContext;
 import org.apache.camel.support.RoutePolicySupport;
 
-import static de.qucosa.camel.config.EndpointUris.KAFKA_BULK_DELETE_CONSUMER;
-import static de.qucosa.camel.config.EndpointUris.KAFKA_BULK_INSERT_CONSUMER;
 import static de.qucosa.camel.config.RouteIds.FEDORA_3_OBJECTINFO_ID;
 import static de.qucosa.camel.config.RouteIds.KAFKA_BULK_DELETE_ID;
 import static de.qucosa.camel.config.RouteIds.KAFKA_BULK_INSERT_ID;

@@ -3,7 +3,6 @@ package de.qucosa.camel.routebuilders;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.qucosa.camel.beans.FedoraEventCreator;
 import de.qucosa.camel.model.Tenant;
-import de.qucosa.camel.model.Url;
 import de.qucosa.camel.policies.FedoraServicePolicy;
 import de.qucosa.camel.policies.SitemapServicePolicy;
 import de.qucosa.camel.strategies.AppendFedoraObjectInfo;
