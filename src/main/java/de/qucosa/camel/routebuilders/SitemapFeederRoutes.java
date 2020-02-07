@@ -3,6 +3,7 @@ package de.qucosa.camel.routebuilders;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.qucosa.camel.beans.FedoraEventCreator;
 import de.qucosa.camel.model.Tenant;
+import de.qucosa.camel.model.Url;
 import de.qucosa.camel.policies.FedoraServicePolicy;
 import de.qucosa.camel.policies.SitemapServicePolicy;
 import de.qucosa.camel.strategies.AppendFedoraObjectInfo;
@@ -10,6 +11,8 @@ import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.component.kafka.KafkaComponent;
+import org.apache.camel.component.kafka.KafkaConstants;
+import org.apache.camel.component.kafka.KafkaManualCommit;
 
 import java.util.List;
 
@@ -90,7 +93,14 @@ public class SitemapFeederRoutes extends RouteBuilder {
                 .setHeader(Exchange.CHARSET_NAME, constant("UTF-8"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .throttle(10)
-                .to(SITEMAP_SERVICE_URI);
+                .to(SITEMAP_SERVICE_URI)
+                .process(exchange -> {
+
+                    if (exchange.getIn().getHeader(Exchange.HTTP_RESPONSE_CODE, Integer.class) == 201) {
+                        KafkaManualCommit commit = exchange.getIn().getHeader(KafkaConstants.MANUAL_COMMIT, KafkaManualCommit.class);
+                        commit.commitSync();
+                    }
+                });
 
         from(DIRECT_DELETE_URI)
                 .routeId(SITEMAP_DELETE_URL_ID)
@@ -105,14 +115,28 @@ public class SitemapFeederRoutes extends RouteBuilder {
                 .setProperty("eventType", simple("create"))
                 .bean(FedoraEventCreator.class, "createEvent")
                 .enrich(FEDORA_3_OBJECTINFO, new AppendFedoraObjectInfo(tenants())).id(BULK_INSERT_APPEND_OBJ_INFO)
-                .to(PUSH_TO_SERVICE).id(BULK_INSERT_PUSH_TO_SERVICE);
+                .to(PUSH_TO_SERVICE).id(BULK_INSERT_PUSH_TO_SERVICE)
+                .process(exchange -> {
+
+                    if (exchange.getIn().getHeader(Exchange.HTTP_RESPONSE_CODE, Integer.class) == 201) {
+                        KafkaManualCommit commit = exchange.getIn().getHeader(KafkaConstants.MANUAL_COMMIT, KafkaManualCommit.class);
+                        commit.commitSync();
+                    }
+                });
 
         from(KAFKA_BULK_DELETE_CONSUMER)
                 .routeId(KAFKA_BULK_DELETE_ID)
                 .setProperty("eventType", simple("delete"))
                 .bean(FedoraEventCreator.class, "createEvent")
                 .enrich(FEDORA_3_OBJECTINFO, new AppendFedoraObjectInfo(tenants())).id(BULK_DELETE_APPEND_OBJ_INFO)
-                .to(PUSH_TO_SERVICE).id(BULK_DELETE_PUSH_TO_SERVICE);
+                .to(PUSH_TO_SERVICE).id(BULK_DELETE_PUSH_TO_SERVICE)
+                .process(exchange -> {
+
+                    if (exchange.getIn().getHeader(Exchange.HTTP_RESPONSE_CODE, Integer.class) == 204) {
+                        KafkaManualCommit commit = exchange.getIn().getHeader(KafkaConstants.MANUAL_COMMIT, KafkaManualCommit.class);
+                        commit.commitSync();
+                    }
+                });
     }
 
     private List<Tenant> tenants() throws Exception {
