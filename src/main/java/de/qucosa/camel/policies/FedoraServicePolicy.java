@@ -23,17 +23,17 @@ public class FedoraServicePolicy extends WebServicePolicyAbstract {
             if (context.getRouteStatus(FEDORA_SERVICE_OBSERVER_ID).isStopped()) {
                 context.createFluentProducerTemplate()
                         .to("controlbus:route?action=start&routeId=" + FEDORA_SERVICE_OBSERVER_ID).send();
-            }
 
-            startRoutes(context);
+                startRoutes(context);
+            }
         } else {
 
             if (context.getRouteStatus(FEDORA_SERVICE_OBSERVER_ID).isStarted()) {
                 context.createFluentProducerTemplate()
                         .to("controlbus:route?action=stop&routeId=" + FEDORA_SERVICE_OBSERVER_ID).send();
-            }
 
-            stopRoutes(context);
+                stopRoutes(context);
+            }
         }
     }
 }
