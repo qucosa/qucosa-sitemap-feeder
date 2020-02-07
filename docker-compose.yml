@@ -17,7 +17,7 @@ services:
     environment:
       KAFKA_ADVERTISED_HOST_NAME: 172.17.0.1
       KAFKA_ADVERTISED_PORT: 9092
-      KAFKA_CREATE_TOPICS: "domain_events:1:1:compact"
+      KAFKA_CREATE_TOPICS: "pidupdate:1:1,piddelete:1:1,service_events:1:1"
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
     depends_on:
       - zookeeper
@@ -29,7 +29,7 @@ services:
           - kafka
 
   feeder:
-    container_name: reporting-feeder
+    container_name: sitemap-feeder
     build:
       context: .
       dockerfile: ./Dockerfile.sitemapfeeder
