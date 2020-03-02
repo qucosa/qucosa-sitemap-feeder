@@ -6,7 +6,6 @@ import de.qucosa.camel.utils.DateTimeConverter;
 import de.qucosa.data.KafkaTopicData;
 import org.apache.camel.Exchange;
 import org.apache.camel.ProducerTemplate;
-import org.apache.camel.Route;
 import org.apache.camel.builder.AdviceWithRouteBuilder;
 import org.apache.camel.component.kafka.KafkaComponent;
 import org.apache.camel.component.kafka.KafkaConstants;
@@ -18,9 +17,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
@@ -51,11 +48,6 @@ import static de.qucosa.camel.config.RouteIds.SITEMAP_CONSUMER_PUSH_TO_SERVICE;
 @TestMethodOrder(value = MethodOrderer.OrderAnnotation.class)
 @Testcontainers
 public class SitemapFeederRoutesTest {
-
-    public static String objState;
-
-    public static String eventType;
-
     private final static DefaultCamelContext camelContext = new DefaultCamelContext();
 
     private static KafkaProducer<String, String> kafkaProducer;
@@ -65,166 +57,109 @@ public class SitemapFeederRoutesTest {
             .withCreateContainerCmdModifier(
                     createContainerCmd -> createContainerCmd.withName("qucosa-sitemap-kafka"));
 
-    private static String AMQ_FILE_PATH = SitemapFeederRoutesTest.class.getResource("/jms/").getPath();
+    private MockEndpoint pushToService;
+    private MockEndpoint saveUrl;
+    private MockEndpoint deleteUrl;
 
     @BeforeAll
-    public void allSetUp() throws IOException, InterruptedException {
-        kafkaCon.start();
-        kafkaCon.execInContainer("/bin/sh", "-c", "kafka-topics --zookeeper localhost:2181 --partitions=1 --replication-factor=1 --create --topic pidupdate");
-        kafkaCon.execInContainer("/bin/sh", "-c", "kafka-topics --zookeeper localhost:2181 --partitions=1 --replication-factor=1 --create --topic piddelete");
-        kafkaCon.execInContainer("/bin/sh", "-c", "kafka-topics --zookeeper localhost:2181 --partitions=1 --replication-factor=1 --create --topic service_events");
+    public void allSetUp() throws Exception {
+        startKafkaContainer();
 
         PropertiesComponent pc = (PropertiesComponent) camelContext.getComponent("properties");
         pc.setLocation("classpath:application-test.properties");
 
-        kafkaProducer = kafkaProducer();
-    }
-
-    @AfterAll
-    public void shutdownAll() {
-        kafkaProducer.close();
-        kafkaCon.stop();
-    }
-
-    @BeforeEach
-    public void setUp() throws Exception {
         camelContext.addRoutes(new SitemapFeederRoutes());
+
+        kafkaProducer = kafkaProducer();
+
+        routeInitSetup();
+        initMocks();
 
         KafkaComponent kafkaComponent = (KafkaComponent) camelContext.getComponent("kafka");
         kafkaComponent.setBrokers(kafkaCon.getBootstrapServers());
+
+        camelContext.start();
     }
 
-    @AfterEach
-    public void tearDown() throws Exception {
-        for (Route route : camelContext.getRoutes()) {
-            camelContext.removeRoute(route.getId());
-        }
+    @AfterAll
+    public void shutdownAll() throws Exception {
+        camelContext.stop();
+        kafkaProducer.close();
+        kafkaCon.stop();
     }
 
     @Test
     @DisplayName("Create 'create' url object and puah to sitemap service.")
     public void pushToServiceCreate() throws Exception {
         kafkaProducer.send(producerRecord(KafkaTopicData.JSON_CREATE_EVENT));
-
-        camelContext.getRouteDefinition(KAFKA_SITEMAP_CONSUMER_ID).adviceWith(camelContext, new AdviceWithRouteBuilder() {
-            @Override
-            public void configure() {
-                weaveById(SITEMAP_CONSUMER_APPEND_OBJ_INFO).remove();
-                weaveById(SITEMAP_CONSUMER_PUSH_TO_SERVICE).replace().to("mock:pushToService");
-            }
-        });
-
-        MockEndpoint pushToService = camelContext.getEndpoint("mock:pushToService", MockEndpoint.class);
         pushToService.expectedMessageCount(1);
-        camelContext.start();
         pushToService.assertIsSatisfied();
-        camelContext.stop();
     }
 
     @Test
-    @DisplayName("Create 'update' url object and puah to sitemap service.")
+    @DisplayName("Create 'update' url object and push to sitemap service.")
     public void pushToServiceUpdate() throws Exception {
+        pushToService.reset();
         kafkaProducer.send(producerRecord(KafkaTopicData.JSON_UPDATE_EVENT));
-
-        camelContext.getRouteDefinition(KAFKA_SITEMAP_CONSUMER_ID).adviceWith(camelContext, new AdviceWithRouteBuilder() {
-            @Override
-            public void configure() {
-                weaveById(SITEMAP_CONSUMER_APPEND_OBJ_INFO).remove();
-                weaveById(SITEMAP_CONSUMER_PUSH_TO_SERVICE).replace().to("mock:pushToService");
-            }
-        });
-
-        MockEndpoint pushToService = camelContext.getEndpoint("mock:pushToService", MockEndpoint.class);
         pushToService.expectedMessageCount(1);
-        camelContext.start();
         pushToService.assertIsSatisfied();
-        camelContext.stop();
     }
-
 
     @Test
     @DisplayName("Create 'delete' url object and puah to sitemap service.")
     public void pushToServiceDelete() throws Exception {
         kafkaProducer.send(producerRecord(KafkaTopicData.JSON_DELETE_EVENT));
-
-        camelContext.getRouteDefinition(KAFKA_SITEMAP_CONSUMER_ID).adviceWith(camelContext, new AdviceWithRouteBuilder() {
-            @Override
-            public void configure() {
-                weaveById(SITEMAP_CONSUMER_APPEND_OBJ_INFO).remove();
-                weaveById(SITEMAP_CONSUMER_PUSH_TO_SERVICE).replace().to("mock:pushToService");
-            }
-        });
-
-        MockEndpoint pushToService = camelContext.getEndpoint("mock:pushToService", MockEndpoint.class);
         pushToService.expectedMessageCount(1);
-        camelContext.start();
         pushToService.assertIsSatisfied();
-        camelContext.stop();
     }
+
 
     @Test
     @DisplayName("Create the sitemap url.")
     public void createUrl() throws Exception {
         ProducerTemplate producerTemplate = camelContext.createProducerTemplate();
-        camelContext.getRouteDefinition("push_service").adviceWith(camelContext, urlCUD(DIRECT_CREATE_URI,"mock:saveUrl"));
-        MockEndpoint saveUrl = camelContext.getEndpoint("mock:saveUrl", MockEndpoint.class);
+        saveUrl.reset();
         saveUrl.expectedMessageCount(1);
-        camelContext.start();
         producerTemplate.send(PUSH_TO_SERVICE, exchange("A", "create"));
         saveUrl.assertIsSatisfied();
-        camelContext.stop();
     }
 
     @Test
     @DisplayName("Update the sitemap url.")
     public void update() throws Exception {
         ProducerTemplate producerTemplate = camelContext.createProducerTemplate();
-        camelContext.getRouteDefinition("push_service").adviceWith(camelContext, urlCUD(DIRECT_CREATE_URI,"mock:updateUrl"));
-        MockEndpoint updateUrl = camelContext.getEndpoint("mock:updateUrl", MockEndpoint.class);
-        updateUrl.expectedMessageCount(1);
-        camelContext.start();
+        saveUrl.expectedMessageCount(1);
         producerTemplate.send(PUSH_TO_SERVICE, exchange("A", "update"));
-        updateUrl.assertIsSatisfied();
-        camelContext.stop();
+        saveUrl.assertIsSatisfied();
     }
 
     @Test
     @DisplayName("Delete the sitemap urls.")
     public void delete() throws Exception {
         ProducerTemplate producerTemplate = camelContext.createProducerTemplate();
-        camelContext.getRouteDefinition("push_service").adviceWith(camelContext, urlCUD(DIRECT_DELETE_URI,"mock:deleteUrl"));
-        MockEndpoint deleteUrl = camelContext.getEndpoint("mock:deleteUrl", MockEndpoint.class);
         deleteUrl.expectedMessageCount(1);
-        camelContext.start();
         producerTemplate.send(PUSH_TO_SERVICE, exchange("A", "delete"));
         deleteUrl.assertIsSatisfied();
-        camelContext.stop();
     }
 
     @Test
     @DisplayName("Delete url from sitemap if document hast state inactive (I).")
     public void deleteStateInactive() throws Exception {
         ProducerTemplate producerTemplate = camelContext.createProducerTemplate();
-        camelContext.getRouteDefinition("push_service").adviceWith(camelContext, urlCUD(DIRECT_DELETE_URI,"mock:deleteUrl"));
-        MockEndpoint deleteUrl = camelContext.getEndpoint("mock:deleteUrl", MockEndpoint.class);
+        deleteUrl.reset();
         deleteUrl.expectedMessageCount(1);
-        camelContext.start();
         producerTemplate.send(PUSH_TO_SERVICE, exchange("I", "delete"));
         deleteUrl.assertIsSatisfied();
-        camelContext.stop();
     }
 
     @Test
     @DisplayName("Delete url from sitemap if document hast state delete (D).")
     public void deleteStateDelete() throws Exception {
         ProducerTemplate producerTemplate = camelContext.createProducerTemplate();
-        camelContext.getRouteDefinition("push_service").adviceWith(camelContext, urlCUD(DIRECT_DELETE_URI,"mock:deleteUrl"));
-        MockEndpoint deleteUrl = camelContext.getEndpoint("mock:deleteUrl", MockEndpoint.class);
+        deleteUrl.reset();
         deleteUrl.expectedMessageCount(1);
-        camelContext.start();
         producerTemplate.send(PUSH_TO_SERVICE, exchange("D", "delete"));
         deleteUrl.assertIsSatisfied();
-        camelContext.stop();
     }
 
     @Test
@@ -232,41 +167,19 @@ public class SitemapFeederRoutesTest {
     public void createFromBulkInsert() throws Exception {
         ProducerRecord<String, String> record = new ProducerRecord<>("pidupdate", 0, "qucosa:12164", "qucosa:12164");
         kafkaProducer.send(record);
-
-        camelContext.getRouteDefinition(KAFKA_BULK_INSERT_ID).adviceWith(camelContext, new AdviceWithRouteBuilder() {
-            @Override
-            public void configure() {
-                weaveById(BULK_INSERT_APPEND_OBJ_INFO).remove();
-                weaveById(BULK_INSERT_PUSH_TO_SERVICE).replace().to("mock:pushToService");
-            }
-        });
-
-        MockEndpoint pushToService = camelContext.getEndpoint("mock:pushToService", MockEndpoint.class);
+        pushToService.reset();
         pushToService.expectedMessageCount(1);
-        camelContext.start();
         pushToService.assertIsSatisfied();
-        camelContext.stop();
     }
 
     @Test
-    @DisplayName("Create url object by PID from kafka piddelete consumer.")
+    @DisplayName("Delete url object by PID from kafka piddelete consumer.")
     public void createFromBulkDelete() throws Exception {
         ProducerRecord<String, String> record = new ProducerRecord<>("piddelete", 0, "qucosa:12164", "qucosa:12164");
         kafkaProducer.send(record);
-
-        camelContext.getRouteDefinition(KAFKA_BULK_DELETE_ID).adviceWith(camelContext, new AdviceWithRouteBuilder() {
-            @Override
-            public void configure() {
-                weaveById(BULK_DELETE_APPEND_OBJ_INFO).remove();
-                weaveById(BULK_DELETE_PUSH_TO_SERVICE).replace().to("mock:pushToService");
-            }
-        });
-
-        MockEndpoint pushToService = camelContext.getEndpoint("mock:pushToService", MockEndpoint.class);
+        pushToService.reset();
         pushToService.expectedMessageCount(1);
-        camelContext.start();
         pushToService.assertIsSatisfied();
-        camelContext.stop();
     }
 
     private Exchange exchange(String objectState, String eventType) {
@@ -295,14 +208,47 @@ public class SitemapFeederRoutesTest {
         };
     }
 
-    private AdviceWithRouteBuilder bulkInsertBuilder() {
-        return new AdviceWithRouteBuilder() {
+    private void routeInitSetup() throws Exception {
+        camelContext.getRouteDefinition(KAFKA_SITEMAP_CONSUMER_ID).adviceWith(camelContext, new AdviceWithRouteBuilder() {
+            @Override
+            public void configure() {
+                weaveById(SITEMAP_CONSUMER_APPEND_OBJ_INFO).remove();
+                weaveById(SITEMAP_CONSUMER_PUSH_TO_SERVICE).replace().to("mock:pushToService");
+            }
+        });
+
+        camelContext.getRouteDefinition("push_service").adviceWith(camelContext, urlCUD(DIRECT_CREATE_URI,"mock:saveUrl"));
+
+        camelContext.getRouteDefinition("push_service").adviceWith(camelContext, urlCUD(DIRECT_DELETE_URI,"mock:deleteUrl"));
+
+        camelContext.getRouteDefinition(KAFKA_BULK_INSERT_ID).adviceWith(camelContext, new AdviceWithRouteBuilder() {
             @Override
             public void configure() {
                 weaveById(BULK_INSERT_APPEND_OBJ_INFO).remove();
-                weaveById(BULK_INSERT_PUSH_TO_SERVICE).replace().to("mock:bulkInsert");
+                weaveById(BULK_INSERT_PUSH_TO_SERVICE).replace().to("mock:pushToService");
             }
-        };
+        });
+
+        camelContext.getRouteDefinition(KAFKA_BULK_DELETE_ID).adviceWith(camelContext, new AdviceWithRouteBuilder() {
+            @Override
+            public void configure() {
+                weaveById(BULK_DELETE_APPEND_OBJ_INFO).remove();
+                weaveById(BULK_DELETE_PUSH_TO_SERVICE).replace().to("mock:pushToService");
+            }
+        });
+    }
+
+    private void initMocks() {
+        pushToService = camelContext.getEndpoint("mock:pushToService", MockEndpoint.class);
+        saveUrl = camelContext.getEndpoint("mock:saveUrl", MockEndpoint.class);
+        deleteUrl = camelContext.getEndpoint("mock:deleteUrl", MockEndpoint.class);
+    }
+
+    private void startKafkaContainer() throws IOException, InterruptedException {
+        kafkaCon.start();
+        kafkaCon.execInContainer("/bin/sh", "-c", "kafka-topics --zookeeper localhost:2181 --partitions=1 --replication-factor=1 --create --topic pidupdate");
+        kafkaCon.execInContainer("/bin/sh", "-c", "kafka-topics --zookeeper localhost:2181 --partitions=1 --replication-factor=1 --create --topic piddelete");
+        kafkaCon.execInContainer("/bin/sh", "-c", "kafka-topics --zookeeper localhost:2181 --partitions=1 --replication-factor=1 --create --topic service_events");
     }
 
     private KafkaProducer<String, String> kafkaProducer() {

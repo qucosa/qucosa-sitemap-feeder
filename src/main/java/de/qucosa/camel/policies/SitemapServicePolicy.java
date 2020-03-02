@@ -24,17 +24,17 @@ public class SitemapServicePolicy extends WebServicePolicyAbstract {
             if (context.getRouteStatus(SITEMAP_SERVICE_OBSERVER_ID).isStopped()) {
                 context.createFluentProducerTemplate()
                         .to("controlbus:route?action=start&routeId=" + SITEMAP_SERVICE_OBSERVER_ID).send();
-            }
 
-            stopRoutes(context);
+                stopRoutes(context);
+            }
         } else {
 
             if (context.getRouteStatus(SITEMAP_SERVICE_OBSERVER_ID).isStarted()) {
                 context.createFluentProducerTemplate()
                         .to("controlbus:route?action=stop&routeId=" + SITEMAP_SERVICE_OBSERVER_ID).send();
-            }
 
-            startRoutes(context);
+                startRoutes(context);
+            }
         }
     }
 }

@@ -35,10 +35,7 @@ public class UrlObjectBuilder {
         Url url = new Url();
 
         try {
-//            String fedoraTenantName = xPath.compile("//obj:objectProfile/obj:objOwnerId/text()")
-//                    .evaluate(document, XPathConstants.STRING).toString();
-            String fedoraTenantName = xPath.compile("//objectProfile/objOwnerId/text()")
-                    .evaluate(document, XPathConstants.STRING).toString();
+            String fedoraTenantName = xPath.compile("//objectProfile/objOwnerId/text()").evaluate(document, XPathConstants.STRING).toString();
             Tenant tenant = tenant(fedoraTenantName);
 
             url.setUrlSetUri(tenant.getSmall());
@@ -54,7 +51,6 @@ public class UrlObjectBuilder {
     public String objectState() {
         try {
             return xPath.compile("//objectProfile/objState/text()").evaluate(document, XPathConstants.STRING).toString();
-//            return xPath.compile("//obj:objectProfile/obj:objState/text()").evaluate(document, XPathConstants.STRING).toString();
         } catch (XPathExpressionException e) {
             throw new RuntimeException("Object state is not exist in document.", e);
         }

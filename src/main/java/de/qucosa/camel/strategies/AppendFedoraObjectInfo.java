@@ -17,6 +17,8 @@
 
 package de.qucosa.camel.strategies;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import de.qucosa.api.EventTypeExtractor;
 import de.qucosa.api.UrlObjectBuilder;
 import de.qucosa.camel.model.Tenant;
@@ -25,6 +27,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.processor.aggregate.AggregationStrategy;
 import org.w3c.dom.Document;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
 
@@ -38,7 +41,14 @@ public class AppendFedoraObjectInfo implements AggregationStrategy {
 
     @Override
     public Exchange aggregate(Exchange original, Exchange resource) {
-        FedoraUpdateEvent event = original.getIn().getBody(FedoraUpdateEvent.class);
+        ObjectMapper objectMapper = new ObjectMapper();
+        FedoraUpdateEvent event = new FedoraUpdateEvent();
+
+        try {
+            event = objectMapper.readValue(original.getIn().getBody(String.class), FedoraUpdateEvent.class);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         UrlObjectBuilder urlObjectBuilder = new UrlObjectBuilder(
                 event,
@@ -50,8 +60,8 @@ public class AppendFedoraObjectInfo implements AggregationStrategy {
         original.setProperty("eventType", EventTypeExtractor.extract(event.getEventType()));
 
         try {
-            original.getIn().setBody(urlObjectBuilder.sitemapUrlObject());
-        } catch (UnsupportedEncodingException e) {
+            original.getIn().setBody(objectMapper.writeValueAsString(urlObjectBuilder.sitemapUrlObject()));
+        } catch (UnsupportedEncodingException | JsonProcessingException e) {
             throw new RuntimeException("URL encoded error.", e);
         }
 
